@@ -1,8 +1,11 @@
+<!-- network without off-ramp flow -->
+<!-- for testing -->
 <additional>
     <flow id="m" begin="0" end="10000000" departPos="base" departSpeed="max" departLane="0" vehsPerHour="500" type="vmix" route="m" />
 	<flow id="p_m" begin="0" end="10000000" departPos="base" departSpeed="max" departLane="1" vehsPerHour="1500" type="cav2" route="m" />
 </additional>
 
+<!-- for training -->
 <!-- <additional>
     <flow id="m_1" begin="0" end="62500" departPos="base" departSpeed="max" departLane="0" vehsPerHour="500" type="vmix" route="m" />
     <flow id="p_m_1" begin="0" end="62500" departPos="base" departSpeed="max" departLane="1" vehsPerHour="500" type="cav2" route="m" />

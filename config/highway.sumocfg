@@ -4,8 +4,8 @@
 
     <input>
         <net-file value="my_net.net.xml"/>
-        <!-- <additional-files value="my_net.rou.xml,detectors.add.xml,my_net.flow.xml"/> -->
-        <additional-files value="old_net.rou.xml,detectors.add.xml,old_net.flow.xml"/>
+        <!--<additional-files value="my_net.rou.xml,detectors.add.xml,my_net.flow.xml"/>-->  <!-- with off-ramp flow, not used for training/testing actually-->
+        <additional-files value="old_net.rou.xml,detectors.add.xml,old_net.flow.xml"/> <!-- without off-ramp flow-->
     </input>
 
     <time>

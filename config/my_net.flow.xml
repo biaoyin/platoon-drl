@@ -1,3 +1,4 @@
+<!-- network with off-ramp flow -->
 <additional>
     <flow id="m" begin="0" end="10000000" departPos="base" departSpeed="max" departLane="0" vehsPerHour="1000" type="vmix" route="m_off" />
 	<flow id="p_m" begin="0" end="10000000" departPos="base" departSpeed="max" departLane="1" vehsPerHour="1500" type="cav2" route="m_off" />
