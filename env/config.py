@@ -7,7 +7,7 @@ TRAIN_CONFIG = {
     'gamma': 0.9,                               # Discount factor
     'eps_start': 1,                             # Epsilon start
     'eps_min': 0.01,                            # Epsilon min
-    'eps_dec': 2e5,                             # Epsilon decay
+    'eps_dec': 2e5,                             # Epsilon decay rate
     'eps_dec_exp': True,                        # Epsilon exponential decay
     'bs': 32,                                   # Batch size 32
     'min_mem': 5000,                            # Replay memory buffer min size 
@@ -18,11 +18,11 @@ TRAIN_CONFIG = {
     'save_freq': 100,                           # Save frequency 1000: straining steps
     'log_freq': 100,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
-    #'log_dir': './logs/train/' + CONFIG + "/", # Log directory (uncomment for training)
-    'log_dir': './logs/test/' + CONFIG + "/",   # Log directory (uncomment for testing)                             
+    'log_dir_train': './logs/train/' + CONFIG + "/", # Log directory (uncomment for training)
+    'log_dir_test': './logs/test/' + CONFIG + "/",   # Log directory (uncomment for testing)                             
     'load': True,                               # Load model 
     'repeat': 0,                                # Repeat action
-    'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000
+    'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                 # Max total training steps if > 0, else (if =0) inf training
     'algo': 'DoubleDQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent

@@ -55,10 +55,10 @@ class Test:
 
         self.agent.load_model_test()
 
-        """ if torch.cuda.is_available():
+        if torch.cuda.is_available():
             print("GPU is available")
         else: 
-            print("GPU is not available") """
+            print("GPU is not available")
 
         print()
         print("TEST")
@@ -70,7 +70,6 @@ class Test:
         [print(arg, "=", getattr(args, arg)) for arg in vars(args)]
 
         self.max_total_steps = args.max_total_steps
-
 
     def test_loop(self):
         print()
@@ -103,7 +102,7 @@ class Test:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="TRAIN")
+    parser = argparse.ArgumentParser(description="TEST")
     str2bool = (lambda v: v.lower() in ("yes", "y", "true", "t", "1"))
     parser.add_argument('-gui', action='store_true', help='Enable GUI mode')
     parser.add_argument('-gpu', type=str, default=TRAIN_CONFIG["gpu"], help='GPU #')
@@ -123,7 +122,7 @@ if __name__ == "__main__":
     parser.add_argument('-save_freq', type=int, default=TRAIN_CONFIG["save_freq"], help='Save frequency')
     parser.add_argument('-log_freq', type=int, default=TRAIN_CONFIG["log_freq"], help='Log frequency')
     parser.add_argument('-save_dir', type=str, default=TRAIN_CONFIG["save_dir"], help='Save directory')
-    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir"], help='Log directory')
+    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_test"], help='Log directory')
     parser.add_argument('-load', type=str2bool, default=TRAIN_CONFIG["load"], help='Load model')
     parser.add_argument('-repeat', type=int, default=TRAIN_CONFIG["repeat"], help='Steps repeat action')
     parser.add_argument('-max_episode_steps', type=int, default=TRAIN_CONFIG["max_episode_steps"], help='Episode step limit')

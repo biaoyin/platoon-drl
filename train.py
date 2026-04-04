@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('-save_freq', type=int, default=TRAIN_CONFIG["save_freq"], help='Save frequency')
     parser.add_argument('-log_freq', type=int, default=TRAIN_CONFIG["log_freq"], help='Log frequency')
     parser.add_argument('-save_dir', type=str, default=TRAIN_CONFIG["save_dir"], help='Save directory')
-    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir"], help='Log directory')
+    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_train"], help='Log directory')
     parser.add_argument('-load', type=str2bool, default=TRAIN_CONFIG["load"], help='Load model')
     parser.add_argument('-repeat', type=int, default=TRAIN_CONFIG["repeat"], help='Steps repeat action')
     parser.add_argument('-max_episode_steps', type=int, default=TRAIN_CONFIG["max_episode_steps"], help='Episode step limit')
