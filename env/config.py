@@ -27,10 +27,11 @@ TRAIN_CONFIG = {
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
     'max_total_episodes_test': 100,           # Max total testing episodes, default 10000
-    'algo': 'DuelingDoubleDQNAgent'                    # DQNAgent
+    'algo': 'DQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent
                                                 # DuelingDoubleDQNAgent
                                                 # PerDuelingDoubleDQNAgent
+                                                # PPORLAgent
 }
 
 ENV_CONFIG = {

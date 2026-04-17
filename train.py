@@ -1,8 +1,13 @@
 from sumolib import checkBinary
 import gymnasium as gym
 import env
-from dqn.agent import  DQNAgent
-import dqn.agent as Agents
+
+from env import TRAIN_CONFIG, ENV_CONFIG
+if TRAIN_CONFIG['algo'] == 'PPORLAgent':
+    import dqn.agent as PPOBaseAgent
+else:
+    import dqn.agent as DQNBaseAgent
+
 import numpy as np
 
 import os
@@ -13,7 +18,6 @@ from datetime import timedelta
 import torch
 import traci
 
-from env import TRAIN_CONFIG, ENV_CONFIG
 
 class Train:
     def __init__(self, args):
@@ -29,6 +33,11 @@ class Train:
             params = [sumobin, '-c', conf, "--collision.mingap-factor", "0", "--no-step-log", "true",]  
         
         self.env = gym.make("PlatoonEnv-v0", params=params, gui=args.gui)
+
+        if  TRAIN_CONFIG['algo']=='PPORLAgent':
+            Agents = PPOBaseAgent
+        else:
+            Agents = DQNBaseAgent
 
         self.agent = getattr(Agents, args.algo)(
             lr=args.lr,
@@ -66,7 +75,7 @@ class Train:
         print()
         print(args.algo)
         print()
-        print(self.agent.online_network)
+        # print(self.agent.online_network)
         print()
         [print(arg, "=", getattr(args, arg)) for arg in vars(args)]
 
@@ -135,7 +144,43 @@ class Train:
         self.init_replay_memory_buffer()
         self.train_loop()
         traci.close()
+################training with PPO ###################
+    def train_loop_ppo(self):
+        print()
+        print("Start Training")
+        print_time = 1
+        observation, info = self.env.reset()
+        rollout_size = 2048  # typical PPO value
+        for step in itertools.count(start=self.agent.resume_step):
+            self.agent.step = step
 
+            action, log_prob, value = self.agent.choose_action(observation)
+
+            new_observation, reward, terminated, truncated, info = self.env.step(action)
+
+            done = terminated or truncated
+
+            self.agent.store_transition(observation, action, log_prob, value, reward, done, info, train=True)
+
+            if done:
+                observation, _ = self.env.reset()
+            else:
+                observation = new_observation
+
+            if len(self.agent.memory) >= rollout_size:
+                self.agent.learn(new_observation)
+                self.agent.memory = []  # CRITICAL
+
+            self.agent.log()
+
+            self.agent.save_model()
+
+            if bool(self.max_total_steps) and step >= self.max_total_steps:
+                exit()
+
+    def run_ppo(self):
+        self.train_loop_ppo()
+        traci.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TRAIN")
@@ -167,7 +212,10 @@ if __name__ == "__main__":
                         help='DQNAgent ' +
                              'DoubleDQNAgent ' +
                              'DuelingDoubleDQNAgent ' +
-                             'PerDuelingDoubleDQNAgent'
+                             'PerDuelingDoubleDQNAgent' +
+                             'PPORLAgent '
                         )
-
-    Train(parser.parse_args()).run()
+    if TRAIN_CONFIG["algo"] == "PPORLAgent":
+        Train(parser.parse_args()).run_ppo()
+    else:
+        Train(parser.parse_args()).run()

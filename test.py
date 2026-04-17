@@ -1,8 +1,11 @@
 from sumolib import checkBinary
 import gymnasium as gym
-import env
-from dqn.agent import  DQNAgent
-import dqn.agent as Agents
+from env import TRAIN_CONFIG, ENV_CONFIG
+if TRAIN_CONFIG['algo'] == 'PPORLAgent':
+    import dqn.agent as PPOBaseAgent
+else:
+    import dqn.agent as DQNBaseAgent
+# import dqn.agent as Agents
 import numpy as np
 
 import os
@@ -13,7 +16,6 @@ from datetime import timedelta
 import torch
 import traci
 
-from env import TRAIN_CONFIG, ENV_CONFIG
 
 class Test:
     def __init__(self, args):
@@ -29,7 +31,10 @@ class Test:
             params = [sumobin, '-c', conf, "--collision.mingap-factor", "0", "--no-step-log", "true",]  
         
         self.env = gym.make("PlatoonEnv-v0", params=params, gui=args.gui)
-
+        if  TRAIN_CONFIG['algo']=='PPORLAgent':
+            Agents = PPOBaseAgent
+        else:
+            Agents = DQNBaseAgent
         self.agent = getattr(Agents, args.algo)(
             lr=args.lr,
             gamma=args.gamma,
@@ -67,7 +72,7 @@ class Test:
         print()
         print(args.algo)
         print()
-        print(self.agent.online_network)
+        # print(self.agent.online_network)
         print()
         [print(arg, "=", getattr(args, arg)) for arg in vars(args)]
 
