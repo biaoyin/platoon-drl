@@ -1,11 +1,8 @@
 from sumolib import checkBinary
 import gymnasium as gym
 from env import TRAIN_CONFIG, ENV_CONFIG
-if TRAIN_CONFIG['algo'] == 'PPORLAgent':
-    import dqn.agent as PPOBaseAgent
-else:
-    import dqn.agent as DQNBaseAgent
-# import dqn.agent as Agents
+
+import dqn.agent as Agent
 import numpy as np
 
 import os
@@ -31,25 +28,19 @@ class Test:
             params = [sumobin, '-c', conf, "--collision.mingap-factor", "0", "--no-step-log", "true",]  
         
         self.env = gym.make("PlatoonEnv-v0", params=params, gui=args.gui)
-        if  TRAIN_CONFIG['algo']=='PPORLAgent':
-            Agents = PPOBaseAgent
-        else:
-            Agents = DQNBaseAgent
-        self.agent = getattr(Agents, args.algo)(
-            lr=args.lr,
+
+        self.agent = getattr(Agent, args.algo)(
+            actor_lr=args.actor_lr,
+            critic_lr=args.critic_lr,
             gamma=args.gamma,
-            epsilon_start=args.eps_start,
-            epsilon_min=args.eps_min,
-            epsilon_decay=args.eps_dec,
-            epsilon_exp_decay=args.eps_dec_exp,
-            input_dim = ENV_CONFIG['observation_space_size'],
-            output_dim = ENV_CONFIG['action_space_size'],
+
             batch_size=args.bs,
-            buffer_size=args.max_mem,
-            min_buffer_size=args.min_mem,
-            update_target_frequency=args.target_update_freq,
-            target_soft_update=args.target_soft_update,
-            target_soft_update_tau=args.target_soft_update_tau,
+            clip_eps=args.clip_eps,
+            gae_lambda=args.gae_lambda,
+            epochs=args.epochs,
+
+            input_dim=ENV_CONFIG['observation_space_size'],
+            output_dim=ENV_CONFIG['action_space_size'],
             save_frequency=args.save_freq,
             log_frequency=args.log_freq,
             save_dir=args.save_dir,
@@ -72,8 +63,6 @@ class Test:
         print()
         print(args.algo)
         print()
-        # print(self.agent.online_network)
-        print()
         [print(arg, "=", getattr(args, arg)) for arg in vars(args)]
 
 
@@ -92,7 +81,7 @@ class Test:
 
             done = terminated or truncated
 
-            self.agent.store_transition_test(observation, action, reward, done, new_observation, info)
+            self.agent.store_transition_test(observation, action, reward, done, info)
             
             if done:                
                 observation, _ = self.env.reset()
@@ -116,31 +105,23 @@ if __name__ == "__main__":
     parser.add_argument('-gui', action='store_true', help='Enable GUI mode')
     parser.add_argument('-gpu', type=str, default=TRAIN_CONFIG["gpu"], help='GPU #')
     parser.add_argument('-n_env', type=int, default=TRAIN_CONFIG["n_env"], help='Multi-processing environments')
-    parser.add_argument('-lr', type=float, default=TRAIN_CONFIG["lr"], help='Learning rate')
+    parser.add_argument('-actor_lr', type=float, default=TRAIN_CONFIG["actor_lr"], help='Learning rate')
+    parser.add_argument('-critic_lr', type=float, default=TRAIN_CONFIG["critic_lr"], help='Learning rate')
     parser.add_argument('-gamma', type=float, default=TRAIN_CONFIG["gamma"], help='Discount factor')
-    parser.add_argument('-eps_start', type=float, default=TRAIN_CONFIG["eps_start"], help='Epsilon start')
-    parser.add_argument('-eps_min', type=float, default=TRAIN_CONFIG["eps_min"], help='Epsilon min')
-    parser.add_argument('-eps_dec', type=float, default=TRAIN_CONFIG["eps_dec"], help='Epsilon decay')
-    parser.add_argument('-eps_dec_exp', type=str2bool, default=TRAIN_CONFIG["eps_dec_exp"], help='Epsilon exponential decay')
     parser.add_argument('-bs', type=int, default=TRAIN_CONFIG["bs"], help='Batch size')
-    parser.add_argument('-min_mem', type=int, default=TRAIN_CONFIG["min_mem"], help='Replay memory buffer min size')
-    parser.add_argument('-max_mem', type=int, default=TRAIN_CONFIG["max_mem"], help='Replay memory buffer max size')
-    parser.add_argument('-target_update_freq', type=int, default=TRAIN_CONFIG["target_update_freq"], help='Target network update frequency')
-    parser.add_argument('-target_soft_update', type=str2bool, default=TRAIN_CONFIG["target_soft_update"], help='Target network soft update')
-    parser.add_argument('-target_soft_update_tau', type=float, default=TRAIN_CONFIG["target_soft_update_tau"], help='Target network soft update tau rate')
+    parser.add_argument('-clip_eps', type=int, default=TRAIN_CONFIG["clip_eps"], help='Batch size')
+    parser.add_argument('-gae_lambda', type=int, default=TRAIN_CONFIG["gae_lambda"], help='Batch size')
+    parser.add_argument('-epochs', type=int, default=TRAIN_CONFIG["epochs"], help='Batch size')
     parser.add_argument('-save_freq', type=int, default=TRAIN_CONFIG["save_freq"], help='Save frequency')
     parser.add_argument('-log_freq', type=int, default=TRAIN_CONFIG["log_freq"], help='Log frequency')
     parser.add_argument('-save_dir', type=str, default=TRAIN_CONFIG["save_dir"], help='Save directory')
-    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_test"], help='Log directory')
+    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_train"], help='Log directory')
     parser.add_argument('-load', type=str2bool, default=TRAIN_CONFIG["load"], help='Load model')
     parser.add_argument('-repeat', type=int, default=TRAIN_CONFIG["repeat"], help='Steps repeat action')
     parser.add_argument('-max_episode_steps', type=int, default=TRAIN_CONFIG["max_episode_steps"], help='Episode step limit')
-    parser.add_argument('-max_total_episodes_test', type=int, default=TRAIN_CONFIG["max_total_episodes_test"], help='Max total testing episodes')
+    parser.add_argument('-max_total_steps', type=int, default=TRAIN_CONFIG["max_total_steps"], help='Max total training steps')
     parser.add_argument('-algo', type=str, default=TRAIN_CONFIG["algo"],
-                        help='DQNAgent ' +
-                             'DoubleDQNAgent ' +
-                             'DuelingDoubleDQNAgent ' +
-                             'PerDuelingDoubleDQNAgent'
+                        help= 'PPORLAgent '
                         )
 
     Test(parser.parse_args()).run()

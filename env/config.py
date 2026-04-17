@@ -5,18 +5,14 @@ CONFIG = "acc_actions"
 TRAIN_CONFIG = {
     'gpu': '0',                                 # GPU # 0 is gpu, 1 is cpu
     'n_env': 1,                                 # Multi-processing environments
-    'lr': 2e-04,                                # Learning rate
+    'actor_lr': 3e-04,                         #  actor network learning rate
+    'critic_lr': 1e-03,                         # critic network learning rate
     'gamma': 0.9,                               # Discount factor
-    'eps_start': 1,                             # Epsilon start
-    'eps_min': 0.01,                            # Epsilon min
-    'eps_dec': 2e5,                             # Epsilon decay rate
-    'eps_dec_exp': True,                        # Epsilon exponential decay
-    'bs': 32,                                   # Batch size 32
-    'min_mem': 5000,                            # Replay memory buffer min size 
-    'max_mem': 10000,                           # Replay memory buffer max size  
-    'target_update_freq': 5000,                 # Target network update frequency
-    'target_soft_update': True,                 # Target network soft update
-    'target_soft_update_tau': 1e-03,            # Target network soft update tau rate
+    'bs' : 128,                                 # batch size
+    'clip_eps' : 0.2,
+    'gae_lambda' : 0.95,
+    'epochs' : 10,
+
     'save_freq': 1000,                           # Save frequency 1000: straining steps
     'log_freq': 200,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
@@ -27,11 +23,7 @@ TRAIN_CONFIG = {
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
     'max_total_episodes_test': 100,           # Max total testing episodes, default 10000
-    'algo': 'DQNAgent'                    # DQNAgent
-                                                # DoubleDQNAgent
-                                                # DuelingDoubleDQNAgent
-                                                # PerDuelingDoubleDQNAgent
-                                                # PPORLAgent
+    'algo': 'PPORLAgent'                      # PPORLAgent
 }
 
 ENV_CONFIG = {
