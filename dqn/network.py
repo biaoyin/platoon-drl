@@ -128,38 +128,52 @@ class DuelingDeepQNetwork(Network):
     def __init__(self, device, lr, input_dim, output_dim):
         super(DuelingDeepQNetwork, self).__init__(device, lr,  input_dim, output_dim)
 
-        self.fc_val = nn.Linear(output_dim, 1)
-        self.fc_adv = nn.Linear(output_dim, output_dim)
-        # self.aggregate_layer = (lambda val, adv: torch.add(val, (adv - adv.mean(dim=1, keepdim=True))))
-        self.aggregate_layer = (lambda val, adv: torch.add(val, (adv - adv.mean())))
+        # replace final layer with shared feature extractor
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 32),
+            self.activation,
+            nn.Linear(32, 64),
+            self.activation,
+            nn.Linear(64, 64),
+            self.activation,
+            nn.Linear(64, 32),
+            self.activation,
+        )
+        # dueling heads
+        self.value_stream = nn.Linear(32, 1)
+        self.advantage_stream = nn.Linear(32, output_dim)
 
         self.to(self.device)
 
     def forward(self, s):
+        if s.dim() == 1:
+            s = s.unsqueeze(0)
+
         net = self.net(s)
-        val = self.fc_val(net)
-        adv = self.fc_adv(net)
-        agg = self.aggregate_layer(val, adv)
+        val = self.value_stream(net)
+        adv = self.advantage_stream(net)
+
+        agg = val + (adv - adv.mean(dim=1, keepdim=True))
 
         return agg
 
     def value(self, s):
+        s = torch.as_tensor(s, dtype=torch.float32).to(self.device)
         net = self.net(s)
-        val = self.fc_val(net)
+        val = self.value_stream(net)
 
         return val
 
     def advantages(self, s):
+        s = torch.as_tensor(s, dtype=torch.float32).to(self.device)
         net = self.net(s)
-        adv = self.fc_adv(net)
+        adv = self.advantage_stream(net)
 
         return adv
 
     def actions(self, obses):
         obses_t = torch.as_tensor(obses, dtype=torch.float32).to(self.device)
-        adv_q_values = self.advantages(obses_t)
+        q_values = self(obses_t)  # calls forward()
+        action = torch.argmax(q_values, dim=1).item()
 
-        max_adv_q_indices = torch.argmax(adv_q_values, dim=1)
-        actions = max_adv_q_indices.detach().tolist()
-
-        return actions
+        return action

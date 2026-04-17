@@ -5,10 +5,11 @@ import random
 import traci.constants as tc
 import numpy as np
 import math
-from .config import ENV_CONFIG
+from .config import ENV_CONFIG, ACC_MAP, TRAIN_CONFIG
 from collections import deque 
 import time
 import sys
+from pathlib import Path
 
 from plexe import Plexe, ACC, CACC, DRIVER, FAKED_CACC, SPEED, POS_X, POS_Y
 
@@ -36,6 +37,16 @@ class PlatoonEnv(gym.Env):
         self.episode_reward = 0.0
         
         self.current_episode = 0
+
+        self.jerk = 0.
+        self.pre_act = 0.
+
+        #BYIN: for speed track analysis
+        self.track_egoID = 'vh_ego'
+        self.track_fronterID = 'vh_fronter'
+        self.count = 0
+        self.lane_change= 0
+        self.tracked = False
 
         #detectors
         self.det1 = ENV_CONFIG['det1']
@@ -69,7 +80,8 @@ class PlatoonEnv(gym.Env):
         self.join_info = {"joiner": None,
                           "leader": None,
                           "fronter": None}
-        
+
+        self.joiner_active = False
         self.terminated = False
 
         # dict of subscriptions
@@ -130,17 +142,17 @@ class PlatoonEnv(gym.Env):
                 veh_lane = traci.vehicle.getLaneIndex(veh)
                 veh_edge = traci.vehicle.getRoadID(veh)
                 if joiner_lane == veh_lane and veh_edge != self.off0 and veh_edge != self.off1: 
-                    if joiner_pos[0] < veh_pos[0] and veh_pos[0] - joiner_pos[0] <= min_dist['fronter']:
+                    if joiner_pos[0] < veh_pos[0] and (veh_pos[0] - joiner_pos[0]) <= min_dist['fronter']:
                         fronter = veh
                         min_dist['fronter'] = veh_pos[0] - joiner_pos[0]
-                    elif joiner_pos[0] >= veh_pos[0] and joiner_pos[0] - veh_pos[0]  <= min_dist['follower']:
+                    elif joiner_pos[0] >= veh_pos[0] and (joiner_pos[0] - veh_pos[0])  <= min_dist['follower']:
                         follower = veh
                         min_dist['follower'] = joiner_pos[0] - veh_pos[0]
                 if self.platoon_lane == veh_lane:
-                    if joiner_pos[0] < veh_pos[0] and veh_pos[0] - joiner_pos[0] <= min_dist['plane_fronter']:
+                    if joiner_pos[0] < veh_pos[0] and (veh_pos[0] - joiner_pos[0]) <= min_dist['plane_fronter']:
                         plane_fronter = veh
                         min_dist['plane_fronter'] = veh_pos[0] - joiner_pos[0]
-                    elif joiner_pos[0] >= veh_pos[0] and joiner_pos[0] - veh_pos[0]  <= min_dist['plane_follower']:
+                    elif joiner_pos[0] >= veh_pos[0] and (joiner_pos[0] - veh_pos[0])  <= min_dist['plane_follower']:
                         plane_follower = veh
                         min_dist['plane_follower'] = joiner_pos[0] - veh_pos[0]
 
@@ -156,7 +168,7 @@ class PlatoonEnv(gym.Env):
 
         if platoon_follower is not None:
             platoon_follower_pos = traci.vehicle.getPosition(platoon_follower)
-            d_joiner_platoon_follower = joiner_pos[0] - platoon_follower_pos[0]
+            d_joiner_platoon_follower = joiner_pos[0] - platoon_follower_pos[0]  # BYIN: or we can use platoon_fronter_pos[0] - platoon_follower_pos[0] instead
         else:
             d_joiner_platoon_follower = ENV_CONFIG['max_caption_range']
 
@@ -191,8 +203,8 @@ class PlatoonEnv(gym.Env):
             platoon_follower_speed = self.platoon_lane_speed
 
 
-        observation = np.array([joiner_speed, fronter_speed, follower_speed, plane_fronter_speed, plane_follower_speed, platoon_fronter_speed, platoon_follower_speed, \
-                                d_fronter_joiner, d_joiner_follower, d_plane_fronter_joiner, d_joiner_plane_follower, d_platoon_fronter_joiner, d_joiner_platoon_follower, \
+        observation = np.array([joiner_speed, fronter_speed, follower_speed, plane_fronter_speed, plane_follower_speed, platoon_fronter_speed, platoon_follower_speed,
+                                d_fronter_joiner, d_joiner_follower, d_plane_fronter_joiner, d_joiner_plane_follower, d_platoon_fronter_joiner, d_joiner_platoon_follower,
                                 joiner_lane, self.platoon_lane], dtype=np.float32)
         
         
@@ -237,7 +249,13 @@ class PlatoonEnv(gym.Env):
                 print("!!!!!!! SUCCESS !!!!!!!!!!!")
                                 
                 d = fronter_pos[0] - joiner_pos[0]
-                
+
+                #BYIN : results analysis
+                if ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']:
+                    file_path = TRAIN_CONFIG['algo'] + '_join_distance.txt'
+                    with open(file_path, "a") as f:
+                        f.write(str(d) + '\n')
+
                 if d < ENV_CONFIG['min_dist']:
                     print("distance too short")
                     reward -= ENV_CONFIG['short_dist_pen'] * (ENV_CONFIG['min_dist'] - d)
@@ -255,7 +273,7 @@ class PlatoonEnv(gym.Env):
                 if self.gui:
                     traci.vehicle.setColor(joiner, (255, 0, 0, 255))
                 if joiner in self.left_vehicles or fronter in self.left_vehicles  : print("VEHICLE LEFT !")
-                elif traci.vehicle.getLaneIndex(joiner) == self.platoon_lane: 
+                elif traci.vehicle.getLaneIndex(joiner) == self.platoon_lane:
                     print("JOIN IN WRONG POSITION")
                     # Delete vehicle if join in the wrong position 
                     self.delete_vehicle(joiner)
@@ -264,7 +282,11 @@ class PlatoonEnv(gym.Env):
 
             else: 
                 # DELAY
-                reward += ENV_CONFIG['delay_penalty']   
+                reward += ENV_CONFIG['delay_penalty']
+                # BYIN: add comfort by vehicle jerk
+                if abs(self.jerk ) > 4:
+                    reward += ENV_CONFIG['comfort_penalty'] * abs(self.jerk)
+                    print("VEHICLE JERK")
         return reward
 
 
@@ -286,7 +308,10 @@ class PlatoonEnv(gym.Env):
         self.failure = 0
         self.success = 0      
         self.terminated = False
-        
+
+        self.jerk = 0.
+        self.pre_act = 0.
+
         # used to start traci the first time this function is called
         if not traci.isLoaded():
             self.start()
@@ -300,32 +325,84 @@ class PlatoonEnv(gym.Env):
         return observation, info
 
 
-
+    # BYIN: this is the decision step
     def step(self, action):
         self.total_steps += 1
         self.episode_steps += 1
+        sim_steps_per_decision = 5 # 0.5 s
+        lane_change_active_dur = 2 # seconds
 
         joiner, leader, fronter = self.join_info.values()
-        if action == ENV_CONFIG['change_lane_action']: 
+
+        if joiner is not None:
+            self.joiner_active = True  # BYIN join
+
+        if ENV_CONFIG['train']:
+            traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
+        if ENV_CONFIG['test']:
+            traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
+        if ENV_CONFIG['test_baseline']:
+            traci.vehicle.setLaneChangeMode(joiner, 512) # BYIN hybrid control that RL combines a controlled, safe SUMO lane change
+
+        if action == ENV_CONFIG['change_lane_action']:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
-            pos = traci.vehicle.getLanePosition(joiner)
-            lane = traci.vehicle.getLaneID(joiner)
-            lane = lane[:-1] +  str(self.platoon_lane)   # platoon lane ID  
-            self.plexe.set_fixed_lane(joiner, self.platoon_lane, safe=False)
-            self.plexe.set_active_controller(joiner, CACC)
-            self.plexe.set_cc_desired_speed(joiner, self.platoon_lane_speed)
-            self.plexe.set_path_cacc_parameters(joiner, distance=self.ivd)
-            traci.vehicle.moveTo(joiner, lane, pos)    # For training
-            #traci.vehicle.changeLane(joiner, 1, 10)   # For testing
+            # pos = traci.vehicle.getLanePosition(joiner)
+            # lane = traci.vehicle.getLaneID(joiner)
+            # lane = lane[:-1] +  str(self.platoon_lane)   # platoon lane ID
+
+            #BYIN: attention: this should be added after simulationStep where the maneuver of lane change occurs
+            # self.plexe.set_fixed_lane(joiner, self.platoon_lane, safe=False)
+            # self.plexe.set_active_controller(joiner, CACC)
+            # self.plexe.set_cc_desired_speed(joiner, self.platoon_lane_speed)
+            # self.plexe.set_path_cacc_parameters(joiner, distance=self.ivd)
+            #AKASMI:
+            # if ENV_CONFIG['train']:
+            #     traci.vehicle.moveTo(joiner, lane, pos)    # For training
+            # if ENV_CONFIG['test']:
+            #     traci.vehicle.changeLane(joiner, 1, 10)   # For testing
+            traci.vehicle.changeLane(joiner, laneIndex=1,
+                                     duration=lane_change_active_dur)  # BYIN : it is not the time to complete lane change but lane change command remains active
             traci.vehicle.updateBestLanes(joiner)
-                
-            if joiner not in self.platoons[leader]["members"]:
-                self.platoons[leader]["members"].append(joiner)
-        
-        for _ in range(5):
+
+            self.pre_act = 0.
+            # BYIN: attention: this should be added after simulationStep where the maneuver of lane change occurs
+            # if joiner not in self.platoons[leader]["members"]:
+            #     self.platoons[leader]["members"].append(joiner)
+        if ENV_CONFIG['action_for_speed'] and action != ENV_CONFIG['change_lane_action']:  # BYIN: new added for other actions; DO NOT set Plexe controller
+            traci.vehicle.setSpeedMode(joiner, 31) # BYIN: Mostly manual (no safety), when 0 --> Fully manual, everything disabled.
+            a = ACC_MAP[action]
+            traci.vehicle.slowDown(joiner, min(self.mixed_lane_speed, max(0, traci.vehicle.getSpeed(joiner) + a/2)), 0.5)
+            self.jerk = (a - self.pre_act)/0.5
+            self.pre_act = a
+
+            # BYIN: track vh for speed analysis
+            if not self.tracked:
+                self.track_egoID = joiner
+                # self.track_fronterID = fronter
+                self.tracked = True
+                self.lane_change = 0
+
+        for _ in range(sim_steps_per_decision):
             stop = self.simulationStep()
             if stop:
                 break
+            # BYIN: update self.joiner_active (if it is deleted or not in simulationStep) and add joiner to platoon members
+            if self.joiner_active:
+                if traci.vehicle.getLaneIndex(joiner) == self.platoon_lane:
+                    self.plexe.set_active_controller(joiner, CACC)
+                    self.plexe.set_cc_desired_speed(joiner, self.platoon_lane_speed)
+                    self.plexe.set_path_cacc_parameters(joiner, distance=self.ivd)
+                    if leader in self.platoons and joiner not in self.platoons[leader]["members"]:
+                        self.platoons[leader]["members"].append(joiner)
+                    self.joiner_active = False
+
+                    # BYIN: track vh for speed analysis
+                    if self.track_egoID == joiner and self.lane_change == 0:
+                        self.tracked = True
+                        self.lane_change = 1
+                    else:
+                        self.tracked = False
+
 
         reward = self._get_reward()
         
@@ -478,9 +555,11 @@ class PlatoonEnv(gym.Env):
     def reset_join_info(self, success_join=False):
         joiner = self.join_info["joiner"]
         if traci.isLoaded() and joiner is not None:
-            if not success_join: 
-                self.plexe.set_active_controller(joiner, ACC)
-                traci.vehicle.setSpeedMode(joiner, 0)
+            if not success_join:
+                # BYIN: do this only when two actions (lane change or keep lane), don't use RL setup for speed control
+                if ENV_CONFIG['action_for_speed']==False:
+                    self.plexe.set_active_controller(joiner, ACC)
+                    traci.vehicle.setSpeedMode(joiner, 31) # BYIN: Full SUMO control (CACC / IDM active)
                 if self.gui:
                     traci.vehicle.setColor(joiner, (0, 0, 255, 255))
                 if joiner in self.topology:
@@ -492,7 +571,9 @@ class PlatoonEnv(gym.Env):
                 
         if traci.isLoaded() and self.join_info["leader"] in traci.vehicle.getIDList():
             self.platoons[self.join_info["leader"]]["state"] = 0
-        
+
+        # BYIN: if joiner is reset, then it is not active anymore
+        self.joiner_active = False
     def warm_up(self):
         for _ in range(self.warmup_duration):
             self.simulationStep()
@@ -562,7 +643,21 @@ class PlatoonEnv(gym.Env):
         stop = False
         self.communicate()
         traci.simulationStep()
-        
+
+        #BYIN: track ego speed
+        if ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']:
+            file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
+            veh_ids = set(traci.vehicle.getIDList())
+            #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
+            if self.tracked and self.track_egoID in veh_ids:
+                self.count += 1
+                ego_speed = traci.vehicle.getSpeed(self.track_egoID)
+                # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
+                if self.count < 1000:
+                    with open(file_name, "a") as f:
+                        # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
+                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change)+ '\n')
+
         joiner, leader, fronter = self.join_info.values()
         self.configure_new_vehicles()
         
@@ -585,7 +680,6 @@ class PlatoonEnv(gym.Env):
         self.handle_left_vehicles()
         #self.handle_off_ramp_exit()
 
-        
         return stop
     
     def is_vehicle_known(self, vehicle_id):

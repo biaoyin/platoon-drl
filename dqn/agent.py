@@ -194,12 +194,12 @@ class Agent(metaclass=ABCMeta):
 
     def log(self):
         """
-        Prints logs and save them 
+        Prints logs and save them in case of train
         """
         if self.step % self.log_frequency == 0 and self.step > self.resume_step:
             step_mean, rew_mean, len_mean, suc_mean, fail_mean, col_mean = self.info_mean('st'), self.info_mean('r'), self.info_mean('l'), self.info_mean('s'), self.info_mean('f'), self.info_mean('c')
 
-            col_avg = self.info_mean('avg')
+            #col_avg = self.info_mean('avg')
 
             print()
             print('Step: ', self.step)
@@ -223,7 +223,7 @@ class Agent(metaclass=ABCMeta):
 
     def log_test(self):
         """
-        Prints logs and save them 
+        Prints logs and save them in case of test
         """
         if self.step % self.log_frequency == 0 and self.step > self.resume_step:
             step_mean, rew_mean, _, suc_mean, fail_mean, col_mean = self.info_mean('st'), self.info_mean('r'), self.info_mean('l'), self.info_mean('s'), self.info_mean('f'), self.info_mean('c')
@@ -414,6 +414,17 @@ class DoubleDQNAgent(DoubleAgent):
 
         self.online_network = Network(self.device, self.lr, self.input_dim, self.output_dim)
         self.target_network = Network(self.device, self.lr, self.input_dim, self.output_dim)
+
+        self.update_target_network(force=True)
+
+class DuelingDoubleDQNAgent(DoubleAgent):
+    def __init__(self, *args, **kwargs):
+        super(DuelingDoubleDQNAgent, self).__init__(*args, **kwargs)
+
+        self.replay_memory_buffer = ReplayMemoryNaive(self.buffer_size, self.batch_size)
+
+        self.online_network = DuelingDeepQNetwork(self.device, self.lr, self.input_dim, self.output_dim)
+        self.target_network = DuelingDeepQNetwork(self.device, self.lr, self.input_dim, self.output_dim)
 
         self.update_target_network(force=True)
 

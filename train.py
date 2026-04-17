@@ -20,6 +20,7 @@ class Train:
         os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
         conf = 'config/highway.sumocfg'
+        #args.gui = True,
         if args.gui:
             sumobin=checkBinary('sumo-gui')
             params = [sumobin, '-c', conf, "--delay", "500", "--collision.mingap-factor", "0", "--quit-on-end"]
