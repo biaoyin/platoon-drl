@@ -34,7 +34,7 @@ class Test:
             critic_lr=args.critic_lr,
             gamma=args.gamma,
 
-            batch_size=args.bs,
+            bs=args.bs,
             clip_eps=args.clip_eps,
             gae_lambda=args.gae_lambda,
             epochs=args.epochs,
@@ -115,11 +115,13 @@ if __name__ == "__main__":
     parser.add_argument('-save_freq', type=int, default=TRAIN_CONFIG["save_freq"], help='Save frequency')
     parser.add_argument('-log_freq', type=int, default=TRAIN_CONFIG["log_freq"], help='Log frequency')
     parser.add_argument('-save_dir', type=str, default=TRAIN_CONFIG["save_dir"], help='Save directory')
-    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_train"], help='Log directory')
+    parser.add_argument('-log_dir', type=str, default=TRAIN_CONFIG["log_dir_test"], help='Log directory')
     parser.add_argument('-load', type=str2bool, default=TRAIN_CONFIG["load"], help='Load model')
     parser.add_argument('-repeat', type=int, default=TRAIN_CONFIG["repeat"], help='Steps repeat action')
     parser.add_argument('-max_episode_steps', type=int, default=TRAIN_CONFIG["max_episode_steps"], help='Episode step limit')
     parser.add_argument('-max_total_steps', type=int, default=TRAIN_CONFIG["max_total_steps"], help='Max total training steps')
+    parser.add_argument('-max_total_episodes_test', type=int, default=TRAIN_CONFIG["max_total_episodes_test"],
+                        help='Max total testing episodes')
     parser.add_argument('-algo', type=str, default=TRAIN_CONFIG["algo"],
                         help= 'PPORLAgent '
                         )
