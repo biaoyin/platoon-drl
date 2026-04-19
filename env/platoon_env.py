@@ -375,6 +375,7 @@ class PlatoonEnv(gym.Env):
             self.jerk = (a - self.pre_act)/0.5
             self.pre_act = a
 
+
             # BYIN: track vh for speed analysis
             if not self.tracked:
                 self.track_egoID = joiner
@@ -653,10 +654,10 @@ class PlatoonEnv(gym.Env):
                 self.count += 1
                 ego_speed = traci.vehicle.getSpeed(self.track_egoID)
                 # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
-                if self.count < 1000:
+                if self.count < 1000000:
                     with open(file_name, "a") as f:
                         # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
-                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change)+ '\n')
+                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change)+ ';' + str(self.pre_act) + '\n')
 
         joiner, leader, fronter = self.join_info.values()
         self.configure_new_vehicles()

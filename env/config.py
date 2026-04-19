@@ -5,14 +5,14 @@ CONFIG = "acc_actions"
 TRAIN_CONFIG = {
     'gpu': '0',                                 # GPU # 0 is gpu, 1 is cpu
     'n_env': 1,                                 # Multi-processing environments
-    'actor_lr': 3e-04,                         #  actor network learning rate
+    'actor_lr': 1e-04, #3e-04,                         #  actor network learning rate
     'critic_lr': 1e-03,                         # critic network learning rate
     'gamma': 0.9,                               # Discount factor
-    'bs' : 128,                                 # batch size
-    'clip_eps' : 0.2,
+    'bs' : 128,    #                             # batch size
+    'clip_eps' : 0.1,  # 0.2
     'gae_lambda' : 0.95,
-    'epochs' : 10,
-
+    'epochs' : 5,  # 10
+    'entropy_coef':0.01,
     'save_freq': 1000,                           # Save frequency 1000: straining steps
     'log_freq': 200,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
@@ -22,14 +22,14 @@ TRAIN_CONFIG = {
     'repeat': 0,                                # Repeat action
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
-    'max_total_episodes_test': 100,           # Max total testing episodes, default 10000
+    'max_total_episodes_test': 1000,           # Max total testing episodes, default 10000
     'algo': 'PPORLAgent'                      # PPORLAgent
 }
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': True,
-    'test': False,
+    'train': False,
+    'test': True ,
     'test_baseline': False,
 
     # Actions executed for speed adjustement

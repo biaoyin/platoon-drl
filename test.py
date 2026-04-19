@@ -38,6 +38,7 @@ class Test:
             clip_eps=args.clip_eps,
             gae_lambda=args.gae_lambda,
             epochs=args.epochs,
+            entropy_coef=args.entropy_coef,
 
             input_dim=ENV_CONFIG['observation_space_size'],
             output_dim=ENV_CONFIG['action_space_size'],
@@ -109,9 +110,10 @@ if __name__ == "__main__":
     parser.add_argument('-critic_lr', type=float, default=TRAIN_CONFIG["critic_lr"], help='Learning rate')
     parser.add_argument('-gamma', type=float, default=TRAIN_CONFIG["gamma"], help='Discount factor')
     parser.add_argument('-bs', type=int, default=TRAIN_CONFIG["bs"], help='Batch size')
-    parser.add_argument('-clip_eps', type=int, default=TRAIN_CONFIG["clip_eps"], help='Batch size')
-    parser.add_argument('-gae_lambda', type=int, default=TRAIN_CONFIG["gae_lambda"], help='Batch size')
-    parser.add_argument('-epochs', type=int, default=TRAIN_CONFIG["epochs"], help='Batch size')
+    parser.add_argument('-clip_eps', type=float, default=TRAIN_CONFIG["clip_eps"], help='clip_eps')
+    parser.add_argument('-gae_lambda', type=float, default=TRAIN_CONFIG["gae_lambda"], help='gae_lambda')
+    parser.add_argument('-epochs', type=int, default=TRAIN_CONFIG["epochs"], help='epochs')
+    parser.add_argument('-entropy_coef', type=float, default=TRAIN_CONFIG["entropy_coef"], help='entropy_coef')
     parser.add_argument('-save_freq', type=int, default=TRAIN_CONFIG["save_freq"], help='Save frequency')
     parser.add_argument('-log_freq', type=int, default=TRAIN_CONFIG["log_freq"], help='Log frequency')
     parser.add_argument('-save_dir', type=str, default=TRAIN_CONFIG["save_dir"], help='Save directory')

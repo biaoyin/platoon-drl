@@ -15,12 +15,13 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 class Agent(metaclass=ABCMeta):
-    def __init__(self, actor_lr, critic_lr, gamma, bs, clip_eps, gae_lambda, epochs, input_dim, output_dim,
+    def __init__(self, actor_lr, critic_lr, gamma, bs, clip_eps, gae_lambda, epochs, entropy_coef, input_dim, output_dim,
                  save_frequency, log_frequency, save_dir, log_dir, load, algo, gpu):
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
         self.gamma = gamma
         self.batch_size = bs
+        self.entropy_coef = entropy_coef
 
         self.clip_eps = clip_eps
         self.gae_lambda = gae_lambda
@@ -337,7 +338,7 @@ class PPOAgent(Agent):
                 critic_loss = (batch_returns - values_pred).pow(2).mean()
 
                 # ===== Total loss =====
-                loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy
+                loss = actor_loss + 0.5 * critic_loss - self.entropy_coef * entropy
 
                 # ===== Optimize =====
                 self.actor_optimizer.zero_grad()
