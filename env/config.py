@@ -18,7 +18,7 @@ TRAIN_CONFIG = {
     'target_soft_update': True,                 # Target network soft update
     'target_soft_update_tau': 1e-03,            # Target network soft update tau rate
     'save_freq': 1000,                           # Save frequency 1000: straining steps
-    'log_freq': 200,                            # Log frequency 5000: straining steps
+    'log_freq': 100,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
     'log_dir_train': './logs/train/' + CONFIG + "/", # Log directory (uncomment for training)
     'log_dir_test': './logs/test/' + CONFIG + "/",   # Log directory (uncomment for testing)                             
@@ -26,8 +26,8 @@ TRAIN_CONFIG = {
     'repeat': 0,                                # Repeat action
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
-    'max_total_episodes_test': 100,           # Max total testing episodes, default 10000
-    'algo': 'DuelingDoubleDQNAgent'                    # DQNAgent
+    'max_total_episodes_test': 50,           # Max total testing episodes, default 10000
+    'algo': 'DoubleDQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent
                                                 # DuelingDoubleDQNAgent
                                                 # PerDuelingDoubleDQNAgent
@@ -35,9 +35,11 @@ TRAIN_CONFIG = {
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': True,
-    'test': False,
+    'train': False,
+    'test': True, # if only run test.py, run_experiment should be false.
     'test_baseline': False,
+    'run_experiment': True,
+    'save_dist_speed': False,
 
     # Actions executed for speed adjustement
     'action_for_speed': True,

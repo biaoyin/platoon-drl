@@ -1,7 +1,6 @@
 from sumolib import checkBinary
 import gymnasium as gym
 import env
-from dqn.agent import  DQNAgent
 import dqn.agent as Agents
 import numpy as np
 
@@ -19,14 +18,18 @@ class Test:
     def __init__(self, args):
         os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-        conf = 'config/highway.sumocfg'
+        if ENV_CONFIG['run_experiment']:
+            conf = args.conf
+        else:
+            conf = 'config/highway.sumocfg'
+
         #args.gui = True,
         if args.gui:
             sumobin=checkBinary('sumo-gui')
             params = [sumobin, '-c', conf, "--delay", "500", "--collision.mingap-factor", "0", "--quit-on-end"]
         else:
             sumobin=checkBinary('sumo')
-            params = [sumobin, '-c', conf, "--collision.mingap-factor", "0", "--no-step-log", "true",]  
+            params = [sumobin, '-c', conf, "--collision.mingap-factor", "0", "--no-step-log", "true",]
         
         self.env = gym.make("PlatoonEnv-v0", params=params, gui=args.gui)
 
@@ -101,13 +104,16 @@ class Test:
                 exit()
 
     def run(self):
-        self.test_loop()
-        traci.close()
+        try:
+            self.test_loop()
+        finally:
+            traci.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TEST")
     str2bool = (lambda v: v.lower() in ("yes", "y", "true", "t", "1"))
+    parser.add_argument('-conf', type=str,  help="Configure file")
     parser.add_argument('-gui', action='store_true', help='Enable GUI mode')
     parser.add_argument('-gpu', type=str, default=TRAIN_CONFIG["gpu"], help='GPU #')
     parser.add_argument('-n_env', type=int, default=TRAIN_CONFIG["n_env"], help='Multi-processing environments')

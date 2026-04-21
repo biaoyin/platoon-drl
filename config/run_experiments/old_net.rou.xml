@@ -1,0 +1,32 @@
+<routes>
+        <vType id="passenger" length="4" accel="1.5" decel="4" maxSpeed="50" sigma="0.5" carFollowModel="IDM"
+        minGap="0" speedFactor="1" probability="0.5" vClass="passenger"/>
+
+		<vType id="cav" length="4" accel="2.5" decel="4" maxSpeed="50" sigma="0" carFollowModel="CC" 
+        minGap="0" xi="1" ploegH="0.5" ploegKp="0.2" ploegKd="0.7" ccAccel="1.5" tauEngine="0.5" omegaN="0.2" 
+        lanesCount="2" probability="0.5"/>
+
+        <vType id="cav2" length="4" accel="2.5" decel="4" maxSpeed="50" sigma="0" vClass="hov" carFollowModel="CC" 
+        minGap="0" xi="1" ploegH="0.5" ploegKp="0.2" ploegKd="0.7" ccAccel="1.5" tauEngine="0.5" omegaN="0.2"
+        lanesCount="2"/>
+
+        <vTypeDistribution id="vmix" vTypes="cav passenger" />
+
+        <route edges="E01 E12 E23 E34 E45 E56 E67 E78" id="m" />
+</routes>
+
+
+<!-- originally, sigma = 0.5 in case of 1500/1000
+0.0: 0.5
+0.2: 0.6
+0.5: 0.8
+0.8: 0.4
+1  : 0.4
+***************** in case of 2000/500
+0.0: 3.9
+0.2: 2.8
+0.5: 4.5
+0.8: 2.9
+1: 4.0
+
+-->

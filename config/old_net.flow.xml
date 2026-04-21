@@ -1,12 +1,12 @@
 <!-- network without off-ramp flow -->
 <!-- for testing -->
-<!--<additional>
+<additional>
     <flow id="m" begin="0" end="1000000" departPos="base" departSpeed="max" departLane="0" vehsPerHour="500" type="vmix" route="m" />
-	<flow id="p_m" begin="0" end="1000000" departPos="base" departSpeed="max" departLane="1" vehsPerHour="500" type="cav2" route="m" />
-</additional>-->
+	<flow id="p_m" begin="0" end="1000000" departPos="base" departSpeed="max" departLane="1" vehsPerHour="1500" type="cav2" route="m" />
+</additional>
 
 <!-- for training -->
-<additional>
+<!--<additional>
     <flow id="m_1" begin="0" end="62500" departPos="base" departSpeed="max" departLane="0" vehsPerHour="500" type="vmix" route="m" />
     <flow id="p_m_1" begin="0" end="62500" departPos="base" departSpeed="max" departLane="1" vehsPerHour="500" type="cav2" route="m" />
 
@@ -55,7 +55,7 @@
     <flow id="m_16" begin="937500" end="1000000" departPos="base" departSpeed="max" departLane="0" vehsPerHour="2000" type="vmix" route="m" />
     <flow id="p_m_16" begin="937500" end="1000000" departPos="base" departSpeed="max" departLane="1" vehsPerHour="2000" type="cav2" route="m" />
 
-</additional>
+</additional> -->
 
 
 <!-- originally:
