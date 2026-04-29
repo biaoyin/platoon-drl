@@ -437,13 +437,14 @@ class PlatoonEnv(gym.Env):
             # select platoon
             available_platoons = []
             joiner_x, joiner_y = traci.vehicle.getPosition(joiner)
-
+            veh_ids = set(traci.vehicle.getIDList())
             for leader in self.platoons:
                 fronter = self.platoons[leader]["members"][-1]
-                fronter_x, fronter_y = traci.vehicle.getPosition(fronter)
+                if fronter in veh_ids and leader in veh_ids:
+                    fronter_x, fronter_y = traci.vehicle.getPosition(fronter)
 
-                if fronter_x <= joiner_x + ENV_CONFIG['upper_bound']  and fronter_x >= joiner_x + ENV_CONFIG['lower_bound']:
-                    available_platoons.append(leader)
+                    if fronter_x <= joiner_x + ENV_CONFIG['upper_bound']  and fronter_x >= joiner_x + ENV_CONFIG['lower_bound']:
+                        available_platoons.append(leader)
             
             if available_platoons:
                 leader = random.choice(available_platoons)
@@ -721,26 +722,33 @@ class PlatoonEnv(gym.Env):
                 platoon_members = self.platoons[veh]["members"]
                 if len(platoon_members) >= 2:
                     new_leader = platoon_members[1]
-                    self.platoons[new_leader] = {"members": [], "state": 1, "ini_size":2}
-                    self.platoons[new_leader]["members"]= platoon_members[1:]
-                    if self.gui:
-                        traci.vehicle.setColor(new_leader, (255, 255, 255, 255))
-                    self.platoons.pop(veh)
-                    self.topology.pop(new_leader)
-                    self.plexe.set_active_controller(new_leader, ACC)
 
-                    for v in self.topology:
-                        if self.topology[v]["leader"] == veh: 
-                            self.topology[v]["leader"] = new_leader
+                    # Check if new_leader still exists
+                    if new_leader not in traci.vehicle.getIDList():
+                        print(f"Warning: new leader {new_leader} no longer exists. Skipping controller assignment.")
+                        new_leader = None
 
-                    for v in self.topology:
-                        if self.topology[v]["front"] == veh: 
-                            self.topology[v]["front"] = new_leader
+                    if new_leader:
+                        self.platoons[new_leader] = {"members": [], "state": 1, "ini_size":2}
+                        self.platoons[new_leader]["members"]= platoon_members[1:]
+                        if self.gui:
+                            traci.vehicle.setColor(new_leader, (255, 255, 255, 255))
+                        self.platoons.pop(veh)
+                        self.topology.pop(new_leader)
+                        self.plexe.set_active_controller(new_leader, ACC)
 
-                    if self.join_info["leader"] == veh:
-                        self.join_info["leader"] = new_leader   
-                        if self.join_info["fronter"] == veh:
-                            self.join_info["fronter"] = new_leader  
+                        for v in self.topology:
+                            if self.topology[v]["leader"] == veh:
+                                self.topology[v]["leader"] = new_leader
+
+                        for v in self.topology:
+                            if self.topology[v]["front"] == veh:
+                                self.topology[v]["front"] = new_leader
+
+                        if self.join_info["leader"] == veh:
+                            self.join_info["leader"] = new_leader
+                            if self.join_info["fronter"] == veh:
+                                self.join_info["fronter"] = new_leader
 
                 else:
                     for v in list(self.topology.keys()):
