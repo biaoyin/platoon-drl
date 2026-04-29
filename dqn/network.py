@@ -49,7 +49,8 @@ class Network(nn.Module):
             action (int): The action (an index) with the max q value
         """
         obs_t = torch.from_numpy(obs).to(self.device)
-        q_values = self(obs_t)
+        with torch.no_grad():
+            q_values = self(obs_t)
         max_q_index = torch.argmax(q_values)
         action = max_q_index.detach().item()
         return action

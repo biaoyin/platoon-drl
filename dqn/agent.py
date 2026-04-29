@@ -178,6 +178,7 @@ class Agent(metaclass=ABCMeta):
         """
         if self.load and os.path.exists(self.save_path):
             self.online_network.load_test(self.save_path)
+            self.online_network.eval() # BYIN
             self.step = self.resume_step
 
     def save_model(self):

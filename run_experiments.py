@@ -13,7 +13,7 @@ flow_values = [500, 1000, 1500, 2000]
 FLOW_DIR = "config/run_experiments"
 LOG_DIR = "logs/test/acc_actions"
 SUMO_CFG_DIR = FLOW_DIR
-RESULT_FILE = "results.csv"
+RESULT_FILE = "results_" + algo +".csv"
 
 template = """<additional> 
     <flow id="m" begin="0" end="1000000" departPos="base" departSpeed="max" departLane="0" vehsPerHour="{flow_m}" type="vmix" route="m" /> 
@@ -93,7 +93,7 @@ for flow_m, flow_pm in itertools.product(flow_values, flow_values):
     print(f"Finished: m={flow_m}, p_m={flow_pm}")
 
     avg_collision = compute_avg(f"{log_dir+algo}")
-    with open("results.csv", "a", newline="") as f:
+    with open(RESULT_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([flow_m, flow_pm, avg_collision])
     print(f"Average collision saved: {avg_collision}")
