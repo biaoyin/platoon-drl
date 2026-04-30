@@ -5,11 +5,13 @@ from tensorboard.backend.event_processing import event_accumulator
 import numpy as np
 import csv
 
-from env.config import ENV_CONFIG, TRAIN_CONFIG
+from env.config import TRAIN_CONFIG
 
-algo = "DoubleDQNAgent_lr0.0002"
-flow_values = [500, 1000, 1500, 2000]
-
+algo = TRAIN_CONFIG['algo'] + '_lr0.0002'
+# flow_m_values = [500, 1000, 1500, 2000]
+# flow_pm_values = [500, 1000, 1500, 2000]
+flow_m_values = [500]
+flow_pm_values = [500]
 FLOW_DIR = "config/run_experiments"
 LOG_DIR = "logs/test/acc_actions"
 SUMO_CFG_DIR = FLOW_DIR
@@ -30,7 +32,17 @@ SUMO_CFG_TEMPLATE = """<configuration>
     <time>
         <begin value="0"/>
         <end value="1000000"/>
+        <step-length value="0.1"/>
     </time>
+
+    <processing>
+        <collision.action value="remove"/>
+        <collision.stoptime value="0.1"/>
+    </processing>
+
+    <gui_only>
+        <start value="true"/>
+    </gui_only>
 </configuration>
 """
 
@@ -65,7 +77,7 @@ if not os.path.exists(RESULT_FILE):
         writer.writerow(["flow_m", "flow_pm", "avg_collision"])
 
 # Main loop (16 runs)
-for flow_m, flow_pm in itertools.product(flow_values, flow_values):
+for flow_m, flow_pm in itertools.product(flow_m_values, flow_pm_values):
 
     flow_name = f"m{flow_m}_pm{flow_pm}"
     flow_file = os.path.join(FLOW_DIR, f"{flow_name}.flow.xml")
