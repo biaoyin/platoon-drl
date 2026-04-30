@@ -166,7 +166,7 @@ class PlatoonEnv(gym.Env):
         d_platoon_fronter_joiner = platoon_fronter_pos[0] - joiner_pos[0]
 
 
-        if platoon_follower is not None:
+        if platoon_follower is not None and platoon_follower in veh_list:
             platoon_follower_pos = traci.vehicle.getPosition(platoon_follower)
             d_joiner_platoon_follower = joiner_pos[0] - platoon_follower_pos[0]  # BYIN: or we can use platoon_fronter_pos[0] - platoon_follower_pos[0] instead
         else:
@@ -175,29 +175,29 @@ class PlatoonEnv(gym.Env):
         # Speeds 
         joiner_speed = traci.vehicle.getSpeed(joiner)
 
-        if fronter is not None:
+        if fronter is not None and fronter in veh_list:
             fronter_speed = traci.vehicle.getSpeed(fronter)
         else:
             fronter_speed = self.mixed_lane_speed
             
-        if follower is not None:
+        if follower is not None and follower in veh_list:
             follower_speed = traci.vehicle.getSpeed(follower)
         else:
             follower_speed = self.mixed_lane_speed
 
-        if plane_fronter is not None:
+        if plane_fronter is not None and plane_fronter in veh_list:
             plane_fronter_speed = traci.vehicle.getSpeed(plane_fronter)
         else:
             plane_fronter_speed = self.platoon_lane_speed
 
-        if plane_follower is not None:
+        if plane_follower is not None and plane_follower in veh_list:
             plane_follower_speed = traci.vehicle.getSpeed(plane_follower)
         else:
             plane_follower_speed = self.platoon_lane_speed
 
         platoon_fronter_speed = traci.vehicle.getSpeed(platoon_fronter)
 
-        if platoon_follower is not None:
+        if platoon_follower is not None and platoon_follower in veh_list:
             platoon_follower_speed = traci.vehicle.getSpeed(platoon_follower) 
         else: 
             platoon_follower_speed = self.platoon_lane_speed
@@ -695,23 +695,26 @@ class PlatoonEnv(gym.Env):
         Performs data transfer between vehicles, i.e., fetching data from
         leading and front vehicles to feed the CACC algorithm
         """
+        veh_ids = set(traci.vehicle.getIDList())
         try:
             for vid, l in self.topology.items():
                 if "leader" in l.keys():
-                    # get data about platoon leader
-                    ld = self.plexe.get_vehicle_data(l["leader"])
-                    # pass leader vehicle data to CACC
-                    self.plexe.set_leader_vehicle_data(vid, ld)
-                    # pass data to the fake CACC as well, in case it's needed
-                    # self.plexe.set_leader_vehicle_fake_data(vid, ld)
+                    if vid in veh_ids and l["leader"] in veh_ids:
+                        # get data about platoon leader
+                        ld = self.plexe.get_vehicle_data(l["leader"])
+                        # pass leader vehicle data to CACC
+                        self.plexe.set_leader_vehicle_data(vid, ld)
+                        # pass data to the fake CACC as well, in case it's needed
+                        # self.plexe.set_leader_vehicle_fake_data(vid, ld)
                 if "front" in l.keys():
-                    # get data about platoon front
-                    fd = self.plexe.get_vehicle_data(l["front"])
-                    # pass front vehicle data to CACC
-                    self.plexe.set_front_vehicle_data(vid, fd)
-                    # compute GPS distance and pass it to the fake CACC
-                    # distance = self.get_distance(vid, l["front"])
-                    # self.plexe.set_front_vehicle_fake_data(vid, fd, distance)
+                    if vid in veh_ids and l["front"] in veh_ids:
+                        # get data about platoon front
+                        fd = self.plexe.get_vehicle_data(l["front"])
+                        # pass front vehicle data to CACC
+                        self.plexe.set_front_vehicle_data(vid, fd)
+                        # compute GPS distance and pass it to the fake CACC
+                        # distance = self.get_distance(vid, l["front"])
+                        # self.plexe.set_front_vehicle_fake_data(vid, fd, distance)
         except traci.exceptions.FatalTraCIError as e:
             print(f"Fatal TraCI error during simulation step: {e}")
             return 
