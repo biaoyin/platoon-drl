@@ -29,10 +29,10 @@ TRAIN_CONFIG = {
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
     'train': False,
-    'test': True ,
+    'test': True,
     'test_baseline': False,
     'run_experiment': True,
-    'save_dist_spped': False,
+    'save_dist_speed': False,
 
     # Actions executed for speed adjustement
     'action_for_speed': True,
