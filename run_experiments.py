@@ -7,11 +7,11 @@ import csv
 
 from env.config import TRAIN_CONFIG
 
-algo = TRAIN_CONFIG['algo'] + '_lr0.0002'
+algo = TRAIN_CONFIG['algo'] + '_actorlr0.0001_criticlr0.001'
 # flow_m_values = [500, 1000, 1500, 2000]
 # flow_pm_values = [500, 1000, 1500, 2000]
-flow_m_values = [2000]
-flow_pm_values = [2000]
+flow_m_values = [500]
+flow_pm_values = [ 1000, 1500, 2000]
 FLOW_DIR = "config/run_experiments"
 LOG_DIR = "logs/test/acc_actions"
 SUMO_CFG_DIR = FLOW_DIR

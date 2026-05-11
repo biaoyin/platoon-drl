@@ -251,7 +251,7 @@ class PlatoonEnv(gym.Env):
                 d = fronter_pos[0] - joiner_pos[0]
 
                 #BYIN : results analysis
-                if ENV_CONFIG['test'] or ENV_CONFIG['test_baseline'] and ENV_CONFIG['save_dist_speed'] :
+                if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed'] :
                     file_path = TRAIN_CONFIG['algo'] + '_join_distance.txt'
                     with open(file_path, "a") as f:
                         f.write(str(d) + '\n')
