@@ -14,7 +14,7 @@ TRAIN_CONFIG = {
     'epochs' : 5,  # 10
     'entropy_coef':0.01,
     'save_freq': 1000,                           # Save frequency 1000: straining steps
-    'log_freq': 200,                            # Log frequency 5000: straining steps
+    'log_freq': 100,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
     'log_dir_train': './logs/train/' + CONFIG + "/", # Log directory (uncomment for training)
     'log_dir_test': './logs/test/' + CONFIG + "/",   # Log directory (uncomment for testing)                             
@@ -22,7 +22,7 @@ TRAIN_CONFIG = {
     'repeat': 0,                                # Repeat action
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
-    'max_total_episodes_test': 1000,           # Max total testing episodes, default 10000
+    'max_total_episodes_test': 10000,           # Max total testing episodes, default 10000
     'algo': 'PPORLAgent'                      # PPORLAgent
 }
 
@@ -31,6 +31,8 @@ ENV_CONFIG = {
     'train': False,
     'test': True ,
     'test_baseline': False,
+    'run_experiment': True,
+    'save_dist_spped': False,
 
     # Actions executed for speed adjustement
     'action_for_speed': True,
