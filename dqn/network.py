@@ -55,20 +55,20 @@ class Network(nn.Module):
         action = max_q_index.detach().item()
         return action
     
-    def save(self, save_path, step, episode_count, rew_mean, len_mean, suc_mean, fail_mean, col_mean ):
+    def save(self, save_path, step, event_count, rew_mean, len_mean, suc_mean, fail_mean, col_mean ):
         """
         Save model's weights and other informations about training
 
         Args:
             save_path: The path where to save the weights
             step: The number of steps
-            episode_count: The number of episodes
+            event_count: The number of episodes
             rew_mean: The mean reward over the last k episodes 
             len_mean: The mean length over the last k episodes
         """
         params_dict = {
             'parameters': {k: v.detach().cpu().numpy() for k, v in self.state_dict().items()},
-            'step': step, 'episode_count': episode_count, 'rew_mean': rew_mean, 'len_mean': len_mean, 'suc_mean': suc_mean, 'fail_mean' : fail_mean, 'col_mean' : col_mean
+            'step': step, 'event_count': event_count, 'rew_mean': rew_mean, 'len_mean': len_mean, 'suc_mean': suc_mean, 'fail_mean' : fail_mean, 'col_mean' : col_mean
         }
         
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -84,7 +84,7 @@ class Network(nn.Module):
 
         Returns:
             step: The number of steps
-            episode_count: The number of episodes
+            event_count: The number of episodes
             rew_mean: The mean reward over the last k episodes 
             len_mean: The mean length over the last k episodes
         """
@@ -97,7 +97,7 @@ class Network(nn.Module):
         parameters = {k: torch.as_tensor(np.array(v), device=self.device) for k, v in params_dict['parameters'].items()}
         self.load_state_dict(parameters)
 
-        return params_dict['step'], params_dict['episode_count'], params_dict['rew_mean'], params_dict['len_mean'], params_dict['suc_mean'], params_dict['fail_mean'], params_dict['col_mean']
+        return params_dict['step'], params_dict['event_count'], params_dict['rew_mean'], params_dict['len_mean'], params_dict['suc_mean'], params_dict['fail_mean'], params_dict['col_mean']
     
     def load_test(self, load_path):
         """
@@ -108,7 +108,7 @@ class Network(nn.Module):
 
         Returns:
             step: The number of steps
-            episode_count: The number of episodes
+            event_count: The number of episodes
             rew_mean: The mean reward over the last k episodes 
             len_mean: The mean length over the last k episodes
         """

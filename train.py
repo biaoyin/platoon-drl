@@ -90,7 +90,7 @@ class Train:
 
             self.agent.store_transition(observation, action, reward, done, new_observation, info)
             
-            if done:                
+            if done:
                 observation, _ = self.env.reset()
             else: 
                 observation = new_observation
@@ -129,7 +129,8 @@ class Train:
             self.agent.save_model()
 
             if bool(self.max_total_steps) and step >= self.max_total_steps:
-                exit()
+                traci.close()
+                break
 
     def run(self):
         self.init_replay_memory_buffer()

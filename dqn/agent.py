@@ -39,7 +39,7 @@ class Agent(metaclass=ABCMeta):
 
         self.step = 0  # training step
         self.resume_step = 0  # training step from loaded model
-        self.episode_count = 0
+        self.event_count = 0
         self.ep_info_buffer = deque([], maxlen=100)
 
         path = algo + '_lr' + str(lr)
@@ -95,7 +95,7 @@ class Agent(metaclass=ABCMeta):
         """
         self.replay_memory_buffer.store_transition(obs, action, rew, done, new_obs)
         if train and done:
-            self.episode_count += 1
+            self.event_count += 1
             self.ep_info_buffer.append({'st': info['steps'],'r': info['reward'], 's': info['successes'], 'c': info['collisions'], 'f': info["failures"] ,'l': self.info_loss})
             print("success", info['successes'], "failure", info["failures"], "collison", info['collisions'])
 
@@ -105,7 +105,7 @@ class Agent(metaclass=ABCMeta):
         Saves the transition in the replay memory and saves episode log
         """
         if done:
-            self.episode_count += 1
+            self.event_count += 1
             self.ep_info_buffer.append({'st': info['steps'],'r': info['reward'], 's': info['successes'], 'c': info['collisions'], 'f': info["failures"] ,'l': self.info_loss})
             print("success", info['successes'], "failure", info["failures"], "collison", info['collisions'])
             
@@ -149,7 +149,6 @@ class Agent(metaclass=ABCMeta):
         """
         if (not self.target_soft_update and self.step % (self.update_target_frequency) == 0) or force:
             self.target_network.load_state_dict(self.online_network.state_dict())
-
         elif self.target_soft_update:
             # update the target network using a linear combination of the weights of the two models
             for target_network_param, online_network_param in zip(self.target_network.parameters(), self.online_network.parameters()):
@@ -165,9 +164,9 @@ class Agent(metaclass=ABCMeta):
         if self.load and os.path.exists(self.save_path):
             print()
             print("Resume training from " + self.save_path + "...")
-            self.resume_step, self.episode_count, rew_mean, len_mean, suc_mean, fail_mean, col_mean = self.online_network.load(self.save_path)
-            [self.ep_info_buffer.append({'r': rew_mean, 'l': len_mean, 's': suc_mean, 'c': col_mean, 'f': fail_mean}) for _ in range(np.min([self.episode_count, self.ep_info_buffer.maxlen]))]
-            print("Step: ", self.resume_step, ", Episodes: ", self.episode_count, ", Avg Rew: ", rew_mean, ", Avg Loss: ", len_mean)
+            self.resume_step, self.event_count, rew_mean, len_mean, suc_mean, fail_mean, col_mean = self.online_network.load(self.save_path)
+            [self.ep_info_buffer.append({'r': rew_mean, 'l': len_mean, 's': suc_mean, 'c': col_mean, 'f': fail_mean}) for _ in range(np.min([self.event_count, self.ep_info_buffer.maxlen]))]
+            print("Step: ", self.resume_step, ", Events: ", self.event_count, ", Avg Rew: ", rew_mean, ", Avg Loss: ", len_mean)
 
             self.update_target_network(force=True)
             self.step = self.resume_step
@@ -190,7 +189,7 @@ class Agent(metaclass=ABCMeta):
         if self.step % self.save_frequency == 0 and self.step > self.resume_step:
             print()
             print("Saving model...")
-            self.online_network.save(self.save_path, self.step, self.episode_count, self.info_mean('r'), self.info_mean('l'), self.info_mean('s'), self.info_mean('f'),self.info_mean('c'))
+            self.online_network.save(self.save_path, self.step, self.event_count, self.info_mean('r'), self.info_mean('l'), self.info_mean('s'), self.info_mean('f'),self.info_mean('c'))
             print("OK!")
 
     def log(self):
@@ -209,17 +208,17 @@ class Agent(metaclass=ABCMeta):
             print('Avg Ep Failure: ', fail_mean)
             print('Avg Ep Collision: ', col_mean)
             print('Loss', len_mean)
-            print('Episodes: ', self.episode_count)
+            print('Events: ', self.event_count)
             print('---', str(timedelta(seconds=round((time.time() - self.start_time), 0))), '---')
 
-            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Loss', len_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Epsilon', self.e, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Episodes', self.episode_count, global_step=(self.episode_count))
+            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Loss', len_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Epsilon', self.e, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Events', self.event_count, global_step=(self.event_count))
 
 
     def log_test(self):
@@ -235,15 +234,15 @@ class Agent(metaclass=ABCMeta):
             print('Avg Ep Success: ', suc_mean)
             print('Avg Ep Failure: ', fail_mean)
             print('Avg Ep Collision: ', col_mean)
-            print('Episodes: ', self.episode_count)
+            print('Events: ', self.event_count)
             print('---', str(timedelta(seconds=round((time.time() - self.start_time), 0))), '---')
 
-            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Episodes', self.episode_count, global_step=(self.episode_count))
+            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Events', self.event_count, global_step=(self.event_count))
 
     def info_mean(self, i):
         """
