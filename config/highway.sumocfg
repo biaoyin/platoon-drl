@@ -5,7 +5,8 @@
     <input>
         <net-file value="my_net.net.xml"/>
         <!--<additional-files value="my_net.rou.xml,detectors.add.xml,my_net.flow.xml"/>-->  <!-- with off-ramp flow, not used actually for training/testing -->
-        <additional-files value="old_net.rou.xml,detectors.add.xml,old_net.flow.xml"/> <!-- without off-ramp flow-->
+        <!--<additional-files value="old_net.rou.xml,detectors.add.xml,old_net.flow.xml"/> -->  <!-- without off-ramp flow-->
+        <additional-files value="old_net.rou.xml,detectors.add.xml,flows_episode.add.xml"/> <!-- BYIN: new set of random demand choice -->
     </input>
 
     <time>

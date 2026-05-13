@@ -58,7 +58,7 @@ class Test:
         )
 
         self.agent.load_model_test()
-        self.max_total_episodes_test = args.max_total_episodes_test
+        self.max_total_events_test = args.max_total_events_test
 
         if torch.cuda.is_available():
             print("GPU is available")
@@ -79,7 +79,7 @@ class Test:
     def test_loop(self):
         print()
         print("Start Testing")
-        episode = 1
+        event = 1
         observation, info = self.env.reset()
         for step in itertools.count(start=self.agent.resume_step):
             self.agent.step = step
@@ -94,13 +94,13 @@ class Test:
             
             if done:                
                 observation, _ = self.env.reset()
-                episode += 1
+                event += 1
             else: 
                 observation = new_observation
 
             self.agent.log_test()
 
-            if bool(self.max_total_episodes_test) and episode >= self.max_total_episodes_test:
+            if bool(self.max_total_events_test) and event >= self.max_total_events_test:
                 exit()
 
     def run(self):
@@ -136,7 +136,7 @@ if __name__ == "__main__":
     parser.add_argument('-load', type=str2bool, default=TRAIN_CONFIG["load"], help='Load model')
     parser.add_argument('-repeat', type=int, default=TRAIN_CONFIG["repeat"], help='Steps repeat action')
     parser.add_argument('-max_episode_steps', type=int, default=TRAIN_CONFIG["max_episode_steps"], help='Episode step limit')
-    parser.add_argument('-max_total_episodes_test', type=int, default=TRAIN_CONFIG["max_total_episodes_test"], help='Max total testing episodes')
+    parser.add_argument('-max_total_events_test', type=int, default=TRAIN_CONFIG["max_total_events_test"], help='Max total testing events')
     parser.add_argument('-algo', type=str, default=TRAIN_CONFIG["algo"],
                         help='DQNAgent ' +
                              'DoubleDQNAgent ' +

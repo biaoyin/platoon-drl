@@ -24,7 +24,7 @@ class PlatoonEnv(gym.Env):
 
         self.params = params
         self.gui = gui
-        self.total_steps = 0
+        # self.total_steps = 0
         self.platoons = {}
         self.topology = {}
         self.collided_vehicles = []
@@ -33,9 +33,11 @@ class PlatoonEnv(gym.Env):
         self.failure = 0
         self.success = 0
         self.collision = 0
-        self.episode_steps = 0
-        self.episode_reward = 0.0
-        
+        self.event_steps = 0  # for the events of success join, failure or collision
+        self.episode_steps = 0 # for reset sumo to train another flow demand
+
+        self.event_reward = 0.0
+        self.current_event = 0
         self.current_episode = 0
 
         self.jerk = 0.
@@ -83,9 +85,13 @@ class PlatoonEnv(gym.Env):
 
         self.joiner_active = False
         self.terminated = False
+        self.truncated = False
 
         # dict of subscriptions
         self.sub = {}
+
+        self.flow_values = ENV_CONFIG['flow_values']
+        self.max_episode_steps = TRAIN_CONFIG["max_episode_steps"]
 
     def start(self):
         traci.start(self.params)
@@ -212,8 +218,8 @@ class PlatoonEnv(gym.Env):
 
 
     def _get_info(self):
-        return {"steps": self.episode_steps,
-                "reward": self.episode_reward,
+        return {"steps": self.event_steps,
+                "reward": self.event_reward,
                 "collisions" : self.collision,
                 "successes" : self.success,
                 "failures" : self.failure,
@@ -290,7 +296,7 @@ class PlatoonEnv(gym.Env):
         return reward
 
 
-    def reset(self, seed = None, options= None):
+    def reset_(self, seed = None, options= None):
         '''
         Resets the environement to start a new state
 
@@ -299,11 +305,11 @@ class PlatoonEnv(gym.Env):
             info: Initiale information about the episode
         '''
         self.current_episode += 1
-        self.episode_steps = 0
-        print(f"########## Reward = {self.episode_reward} ############")
+        self.event_steps = 0
+        print(f"########## Reward = {self.event_reward} ############")
         print(f"############################")
         self.reset_join_info(success_join=self.success)
-        self.episode_reward = 0.0
+        self.event_reward = 0.0
         self.collision = 0
         self.failure = 0
         self.success = 0      
@@ -319,16 +325,92 @@ class PlatoonEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        print(f"########## Episode {self.current_episode} ##########")
+        print(f"########## Event {self.current_episode} ##########")
         print("################################")
 
         return observation, info
 
+    def reset(self, seed=None, options=None):
+        '''
+        Resets the environement to start a new state
+
+        Returns:
+            observation: The initiale state
+            info: Initiale information about the episode
+        '''
+        super().reset(seed=seed)
+        self.current_event +=1
+        # used to start traci the first time this function is called
+        if not traci.isLoaded():
+            self.current_episode = 1
+            self.generate_flow_file()
+            print(f"Flow_0 = {self.flow_0}")
+            print(f"Flow_1 = {self.flow_1}")
+            self.start()
+        # reset sumo if max_episode_steps reaches
+        elif self.truncated:
+            self.reset_sumo()
+
+        # reset basic variables after each event
+        self.reset_variables()
+
+        observation = self._get_obs()
+        info = self._get_info()
+
+        print(f"########## Episode {self.current_episode} and Event {self.current_event} ##########")
+        print("################################")
+
+        return observation, info
+
+    def reset_variables(self):
+
+        self.event_steps = 0
+
+        print(f"########## Reward = {self.event_reward} ############")
+        print(f"############################")
+
+        self.reset_join_info(success_join=self.success)
+
+        self.event_reward = 0.0
+        self.collision = 0
+        self.failure = 0
+        self.success = 0
+
+        self.terminated = False  #reset for current event
+
+        self.jerk = 0.
+        self.pre_act = 0.
+
+    def reset_sumo(self):
+        self.current_episode += 1
+        self.current_event = 0
+        self.episode_steps = 0
+
+        self.platoons = {}
+        self.topology = {}
+        self.collided_vehicles = []
+        self.join_info = {"joiner": None,
+                          "leader": None,
+                          "fronter": None}
+        self.sub = {}
+
+        if traci.isLoaded():
+            traci.close()
+
+        self.generate_flow_file()
+
+        print(f"Flow_0 = {self.flow_0}")
+        print(f"Flow_1 = {self.flow_1}")
+
+        self.start()
+        self.truncated = False #reset for current episode
 
     # BYIN: this is the decision step
     def step(self, action):
-        self.total_steps += 1
+        # self.total_steps += 1
+        self.event_steps += 1
         self.episode_steps += 1
+
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
 
@@ -406,7 +488,7 @@ class PlatoonEnv(gym.Env):
 
         reward = self._get_reward()
         
-        self.episode_reward += reward
+        self.event_reward += reward
 
         if not self.terminated:
             observation = self._get_obs()
@@ -415,7 +497,8 @@ class PlatoonEnv(gym.Env):
             
         info = self._get_info()
 
-        return observation, reward, self.terminated, False, info
+        self.truncated = self.episode_steps >= self.max_episode_steps
+        return observation, reward, self.terminated, self.truncated, info
     
     def select_joiner(self):
 
@@ -786,7 +869,41 @@ class PlatoonEnv(gym.Env):
             return ENV_CONFIG['max_caption_range']
         else:
             return abs(veh1_pos - veh2_pos)
-                
-                
 
+
+
+    def generate_flow_file(self):
+
+        self.flow_0 = random.choice(self.flow_values)
+        self.flow_1 = random.choice(self.flow_values)
+        output_path = 'config/flows_episode.add.xml'
+
+        xml = f"""
+    <additional>
+
+        <flow id="lane0"
+              begin="0"
+              end="1000000"
+              departPos="base"
+              departSpeed="max"
+              departLane="0"
+              vehsPerHour="{self.flow_0}"
+              type="vmix"
+              route="m" />
+
+        <flow id="lane1"
+              begin="0"
+              end="1000000"
+              departPos="base"
+              departSpeed="max"
+              departLane="1"
+              vehsPerHour="{self.flow_1}"
+              type="cav2"
+              route="m" />
+
+    </additional>
+    """
+
+        with open(output_path, "w") as f:
+            f.write(xml)
 

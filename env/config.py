@@ -14,7 +14,7 @@ TRAIN_CONFIG = {
     'bs': 32,                                   # Batch size 32
     'min_mem': 5000,                            # Replay memory buffer min size 
     'max_mem': 10000,                           # Replay memory buffer max size  
-    'target_update_freq': 5000,                 # Target network update frequency
+    'target_update_freq': 1000,                 # Target network update frequency
     'target_soft_update': True,                 # Target network soft update
     'target_soft_update_tau': 1e-03,            # Target network soft update tau rate
     'save_freq': 1000,                           # Save frequency 1000: straining steps
@@ -25,8 +25,8 @@ TRAIN_CONFIG = {
     'load': True,                               # Load model 
     'repeat': 0,                                # Repeat action
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
-    'max_total_steps': 1000000,                  # Max total training steps e.g.,1000000 if > 0, else (if =0) inf training
-    'max_total_episodes_test': 50,           # Max total testing episodes, default 10000
+    'max_total_steps': 1000000,                  # Max total training (decision) steps e.g.,1000000 if > 0, else (if =0) inf training
+    'max_total_events_test': 10000,           # Max total testing events, default 10000
     'algo': 'DoubleDQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent
                                                 # DuelingDoubleDQNAgent
@@ -35,10 +35,10 @@ TRAIN_CONFIG = {
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': False,
-    'test': True, # if only run test.py, run_experiment should be false.
+    'train': True,
+    'test': False, # if only run test.py, run_experiment should be false.
     'test_baseline': False,
-    'run_experiment': True,
+    'run_experiment': False,
     'save_dist_speed': False,
 
     # Actions executed for speed adjustement
@@ -98,6 +98,7 @@ ENV_CONFIG = {
     'long_dist_pen': 0.5,
     'short_dist_pen': 2,
 
+    'flow_values' : [500, 1000, 1500, 2000]
 }
 
 ACC_MAP = {
