@@ -9,11 +9,11 @@ TRAIN_CONFIG = {
     'gamma': 0.9,                               # Discount factor
     'eps_start': 1,                             # Epsilon start
     'eps_min': 0.01,                            # Epsilon min
-    'eps_dec': 2e5,                             # Epsilon decay rate
+    'eps_dec': 6e5,        #2e5                     # Epsilon decay rate
     'eps_dec_exp': True,                        # Epsilon exponential decay
     'bs': 32,                                   # Batch size 32
-    'min_mem': 5000,                            # Replay memory buffer min size 
-    'max_mem': 10000,                           # Replay memory buffer max size  
+    'min_mem': 20000, #5000,                            # Replay memory buffer min size
+    'max_mem': 100000,  #10000                         # Replay memory buffer max size
     'target_update_freq': 1000,                 # Target network update frequency
     'target_soft_update': True,                 # Target network soft update
     'target_soft_update_tau': 1e-03,            # Target network soft update tau rate
@@ -27,7 +27,7 @@ TRAIN_CONFIG = {
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training (decision) steps e.g.,1000000 if > 0, else (if =0) inf training
     'max_total_events_test': 10000,           # Max total testing events, default 10000
-    'algo': 'DoubleDQNAgent'                    # DQNAgent
+    'algo': 'DQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent
                                                 # DuelingDoubleDQNAgent
                                                 # PerDuelingDoubleDQNAgent

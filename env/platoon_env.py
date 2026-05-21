@@ -5,6 +5,8 @@ import random
 import traci.constants as tc
 import numpy as np
 import math
+
+
 from .config import ENV_CONFIG, ACC_MAP, TRAIN_CONFIG
 from collections import deque 
 import time
@@ -24,7 +26,7 @@ class PlatoonEnv(gym.Env):
 
         self.params = params
         self.gui = gui
-        # self.total_steps = 0
+        self.total_steps = 0
         self.platoons = {}
         self.topology = {}
         self.collided_vehicles = []
@@ -288,6 +290,7 @@ class PlatoonEnv(gym.Env):
 
             else: 
                 # DELAY
+                # print(f"density_factor {self.density_factor}")
                 reward += ENV_CONFIG['delay_penalty']
                 # BYIN: add comfort by vehicle jerk
                 if abs(self.jerk ) > 4:
@@ -343,9 +346,10 @@ class PlatoonEnv(gym.Env):
         # used to start traci the first time this function is called
         if not traci.isLoaded():
             self.current_episode = 1
-            self.generate_flow_file()
-            print(f"Flow_0 = {self.flow_0}")
-            print(f"Flow_1 = {self.flow_1}")
+            if ENV_CONFIG['train']:
+                self.generate_flow_file()
+                print(f"Flow_0 = {self.flow_0}")
+                print(f"Flow_1 = {self.flow_1}")
             self.start()
         # reset sumo if max_episode_steps reaches
         elif self.truncated:
@@ -397,17 +401,18 @@ class PlatoonEnv(gym.Env):
         if traci.isLoaded():
             traci.close()
 
-        self.generate_flow_file()
+        if ENV_CONFIG['train']:
+            self.generate_flow_file()
 
-        print(f"Flow_0 = {self.flow_0}")
-        print(f"Flow_1 = {self.flow_1}")
+            print(f"Flow_0 = {self.flow_0}")
+            print(f"Flow_1 = {self.flow_1}")
 
         self.start()
         self.truncated = False #reset for current episode
 
     # BYIN: this is the decision step
     def step(self, action):
-        # self.total_steps += 1
+        self.total_steps += 1
         self.event_steps += 1
         self.episode_steps += 1
 
@@ -874,8 +879,22 @@ class PlatoonEnv(gym.Env):
 
     def generate_flow_file(self):
 
-        self.flow_0 = random.choice(self.flow_values)
-        self.flow_1 = random.choice(self.flow_values)
+        if self.total_steps < 300000:
+            weights = [0.7, 0.2, 0.1, 0.0]
+        elif self.total_steps < 600000:
+            weights = [0.5, 0.3, 0.15, 0.05]
+        elif self.total_steps < 800000:
+            weights = [0.35, 0.3, 0.2, 0.15]
+        else:
+            weights = [0.25, 0.25, 0.25, 0.25]
+
+        self.flow_0 = random.choices(self.flow_values, weights)[0]
+        self.flow_1 = random.choices(self.flow_values, weights)[0]
+
+        # self.density_factor = np.clip((self.flow_0 + self.flow_1)/2000,
+        #                               0.5,
+        #                               2.0)
+
         output_path = 'config/flows_episode.add.xml'
 
         xml = f"""
