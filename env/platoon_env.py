@@ -259,10 +259,10 @@ class PlatoonEnv(gym.Env):
                 d = fronter_pos[0] - joiner_pos[0]
 
                 #BYIN : results analysis
-                if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed'] :
+                if (ENV_CONFIG['test'] or ENV_CONFIG['test_safety_shield']) and ENV_CONFIG['save_dist_speed'] :
                     file_path = TRAIN_CONFIG['algo'] + '_join_distance.txt'
                     with open(file_path, "a") as f:
-                        f.write(str(d) + '\n')
+                        f.write(str(self.total_steps) + ';' + str(d) + '\n')
 
                 if d < ENV_CONFIG['min_dist']:
                     print("distance too short")
@@ -418,6 +418,7 @@ class PlatoonEnv(gym.Env):
 
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
+        safe_merge = True
 
         joiner, leader, fronter = self.join_info.values()
 
@@ -428,10 +429,14 @@ class PlatoonEnv(gym.Env):
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
         if ENV_CONFIG['test']:
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
-        if ENV_CONFIG['test_baseline']:
-            traci.vehicle.setLaneChangeMode(joiner, 512) # BYIN hybrid control that RL combines a controlled, safe SUMO lane change
+        # if ENV_CONFIG['test_baseline']:
+        #     traci.vehicle.setLaneChangeMode(joiner, 512) # BYIN hybrid control that RL combines a controlled, safe SUMO lane change
+        if ENV_CONFIG['test_safety_shield']:
+            traci.vehicle.setLaneChangeMode(joiner, 0)
+            lane_change_active_dur = 4
+            safe_merge = self.safe_to_merge()
 
-        if action == ENV_CONFIG['change_lane_action']:   # action = 0
+        if action == ENV_CONFIG['change_lane_action'] and safe_merge == True:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
             # pos = traci.vehicle.getLanePosition(joiner)
             # lane = traci.vehicle.getLaneID(joiner)
@@ -731,19 +736,19 @@ class PlatoonEnv(gym.Env):
         self.communicate()
         traci.simulationStep()
 
-        #BYIN: track ego speed
-        if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed']:
-            file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
-            veh_ids = set(traci.vehicle.getIDList())
-            #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
-            if self.tracked and self.track_egoID in veh_ids:
-                self.count += 1
-                ego_speed = traci.vehicle.getSpeed(self.track_egoID)
-                # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
-                if self.count < 1000000:
-                    with open(file_name, "a") as f:
-                        # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
-                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + '\n')
+        # #BYIN: track ego speed
+        # if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed']:
+        #     file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
+        #     veh_ids = set(traci.vehicle.getIDList())
+        #     #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
+        #     if self.tracked and self.track_egoID in veh_ids:
+        #         self.count += 1
+        #         ego_speed = traci.vehicle.getSpeed(self.track_egoID)
+        #         # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
+        #         if self.count < 1000000:
+        #             with open(file_name, "a") as f:
+        #                 # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
+        #                 f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + '\n')
 
         joiner, leader, fronter = self.join_info.values()
         self.configure_new_vehicles()
@@ -926,3 +931,24 @@ class PlatoonEnv(gym.Env):
         with open(output_path, "w") as f:
             f.write(xml)
 
+    def safe_to_merge (self):
+        observation = self._get_obs()
+
+        joiner_speed = observation[0]
+        platoon_fronter_speed = observation[3]
+        platoon_follower_speed = observation[4]
+        d_platoon_fronter_joiner = observation[11]
+        d_joiner_platoon_follower =  observation[12]
+
+        veh_length = 4
+
+        rear_gap  = d_joiner_platoon_follower - veh_length
+        front_gap = d_platoon_fronter_joiner - veh_length
+        rear_ttc = max(rear_gap,0) / (platoon_follower_speed - joiner_speed)
+        front_ttc = max(front_gap,0) / (joiner_speed - platoon_fronter_speed)
+
+        if rear_gap <=0 or (0 < rear_ttc < 2.0) or front_gap <= 0 or (0 < front_ttc < 2.0):
+            print("safe merge is false!")
+            return False
+
+        return True
