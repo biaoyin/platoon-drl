@@ -1,5 +1,6 @@
 from sumolib import checkBinary
 import gymnasium as gym
+
 import env
 import dqn.agent as Agents
 import numpy as np
@@ -13,6 +14,7 @@ import torch
 import traci
 
 from env import TRAIN_CONFIG, ENV_CONFIG
+
 
 class Test:
     def __init__(self, args):
