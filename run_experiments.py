@@ -1,3 +1,8 @@
+################
+## BYIN: 2026-06
+## This script is for testing simulation (test.py) with different traffic loads
+## save performance matrix by reading log events recorded by tensorflow
+################
 import os
 import subprocess
 import itertools
@@ -8,10 +13,20 @@ import csv
 from env.config import TRAIN_CONFIG
 
 algo = TRAIN_CONFIG['algo'] + '_actorlr0.0001_criticlr0.001'
-# flow_m_values = [500, 1000, 1500, 2000]
-# flow_pm_values = [500, 1000, 1500, 2000]
-flow_m_values = [500]
-flow_pm_values = [ 1000, 1500, 2000]
+flow_m_values = [500, 1000, 1500, 2000]
+flow_pm_values = [500, 1000, 1500, 2000]
+# flow_m_values = [2000]
+# flow_pm_values = [2000]
+# invalid_paris = {
+#     (500, 1000),
+#     (500, 1500),
+#     (1000, 500),
+#     (1000, 1500),
+#     (1500, 1000),
+#     (1500, 2000),
+#     (2000, 1000),
+#     (2000, 1500),
+# }
 FLOW_DIR = "config/run_experiments"
 LOG_DIR = "logs/test/acc_actions"
 SUMO_CFG_DIR = FLOW_DIR
@@ -79,12 +94,13 @@ if not os.path.exists(RESULT_FILE):
 # Main loop (16 runs)
 for flow_m, flow_pm in itertools.product(flow_m_values, flow_pm_values):
 
+    # if (flow_m, flow_pm) in invalid_paris:
+    #     continue
+
     flow_name = f"m{flow_m}_pm{flow_pm}"
     flow_file = os.path.join(FLOW_DIR, f"{flow_name}.flow.xml")
     log_dir = os.path.join(LOG_DIR, flow_name)
     cfg_file = os.path.join(SUMO_CFG_DIR, f"run_{flow_name}.sumocfg")
-
-    #os.makedirs(log_dir, exist_ok=True)
 
     # Create flow XML
     with open(flow_file, "w") as f:
