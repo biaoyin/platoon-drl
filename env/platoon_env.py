@@ -5,6 +5,8 @@ import random
 import traci.constants as tc
 import numpy as np
 import math
+
+
 from .config import ENV_CONFIG, ACC_MAP, TRAIN_CONFIG
 from collections import deque 
 import time
@@ -33,9 +35,11 @@ class PlatoonEnv(gym.Env):
         self.failure = 0
         self.success = 0
         self.collision = 0
-        self.episode_steps = 0
-        self.episode_reward = 0.0
-        
+        self.event_steps = 0  # for the events of success join, failure or collision
+        self.episode_steps = 0 # for reset sumo to train another flow demand
+
+        self.event_reward = 0.0
+        self.current_event = 0
         self.current_episode = 0
 
         self.jerk = 0.
@@ -83,9 +87,13 @@ class PlatoonEnv(gym.Env):
 
         self.joiner_active = False
         self.terminated = False
+        self.truncated = False
 
         # dict of subscriptions
         self.sub = {}
+
+        self.flow_values = ENV_CONFIG['flow_values']
+        self.max_episode_steps = TRAIN_CONFIG["max_episode_steps"]
 
     def start(self):
         traci.start(self.params)
@@ -212,8 +220,8 @@ class PlatoonEnv(gym.Env):
 
 
     def _get_info(self):
-        return {"steps": self.episode_steps,
-                "reward": self.episode_reward,
+        return {"steps": self.event_steps,
+                "reward": self.event_reward,
                 "collisions" : self.collision,
                 "successes" : self.success,
                 "failures" : self.failure,
@@ -251,10 +259,10 @@ class PlatoonEnv(gym.Env):
                 d = fronter_pos[0] - joiner_pos[0]
 
                 #BYIN : results analysis
-                if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed'] :
+                if (ENV_CONFIG['test'] or ENV_CONFIG['test_safety_shield']) and ENV_CONFIG['save_dist_speed'] :
                     file_path = TRAIN_CONFIG['algo'] + '_join_distance.txt'
                     with open(file_path, "a") as f:
-                        f.write(str(d) + '\n')
+                        f.write(str(self.total_steps) + ';' + str(d) + '\n')
 
                 if d < ENV_CONFIG['min_dist']:
                     print("distance too short")
@@ -290,7 +298,7 @@ class PlatoonEnv(gym.Env):
         return reward
 
 
-    def reset(self, seed = None, options= None):
+    def reset_(self, seed = None, options= None):
         '''
         Resets the environement to start a new state
 
@@ -299,11 +307,11 @@ class PlatoonEnv(gym.Env):
             info: Initiale information about the episode
         '''
         self.current_episode += 1
-        self.episode_steps = 0
-        print(f"########## Reward = {self.episode_reward} ############")
+        self.event_steps = 0
+        print(f"########## Reward = {self.event_reward} ############")
         print(f"############################")
         self.reset_join_info(success_join=self.success)
-        self.episode_reward = 0.0
+        self.event_reward = 0.0
         self.collision = 0
         self.failure = 0
         self.success = 0      
@@ -319,18 +327,97 @@ class PlatoonEnv(gym.Env):
         observation = self._get_obs()
         info = self._get_info()
 
-        print(f"########## Episode {self.current_episode} ##########")
+        print(f"########## Event {self.current_episode} ##########")
         print("################################")
 
         return observation, info
 
+    def reset(self, seed=None, options=None):
+        '''
+        Resets the environement to start a new state
+
+        Returns:
+            observation: The initiale state
+            info: Initiale information about the episode
+        '''
+        super().reset(seed=seed)
+        self.current_event +=1
+        # used to start traci the first time this function is called
+        if not traci.isLoaded():
+            self.current_episode = 1
+            if ENV_CONFIG['train']:
+                self.generate_flow_file()
+                print(f"Flow_0 = {self.flow_0}")
+                print(f"Flow_1 = {self.flow_1}")
+            self.start()
+        # reset sumo if max_episode_steps reaches
+        elif self.truncated:
+            self.reset_sumo()
+
+        # reset basic variables after each event
+        self.reset_variables()
+
+        observation = self._get_obs()
+        info = self._get_info()
+
+        print(f"########## Episode {self.current_episode} and Event {self.current_event} ##########")
+        print("################################")
+
+        return observation, info
+
+    def reset_variables(self):
+
+        self.event_steps = 0
+
+        print(f"########## Reward = {self.event_reward} ############")
+        print(f"############################")
+
+        self.reset_join_info(success_join=self.success)
+
+        self.event_reward = 0.0
+        self.collision = 0
+        self.failure = 0
+        self.success = 0
+
+        self.terminated = False  #reset for current event
+
+        self.jerk = 0.
+        self.pre_act = 0.
+
+    def reset_sumo(self):
+        self.current_episode += 1
+        self.current_event = 0
+        self.episode_steps = 0
+
+        self.platoons = {}
+        self.topology = {}
+        self.collided_vehicles = []
+        self.join_info = {"joiner": None,
+                          "leader": None,
+                          "fronter": None}
+        self.sub = {}
+
+        if traci.isLoaded():
+            traci.close()
+
+        if ENV_CONFIG['train']:
+            self.generate_flow_file()
+
+            print(f"Flow_0 = {self.flow_0}")
+            print(f"Flow_1 = {self.flow_1}")
+
+        self.start()
+        self.truncated = False #reset for current episode
 
     # BYIN: this is the decision step
     def step(self, action):
         self.total_steps += 1
+        self.event_steps += 1
         self.episode_steps += 1
+
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
+        safe_merge = True
 
         joiner, leader, fronter = self.join_info.values()
 
@@ -341,10 +428,14 @@ class PlatoonEnv(gym.Env):
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
         if ENV_CONFIG['test']:
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
-        if ENV_CONFIG['test_baseline']:
-            traci.vehicle.setLaneChangeMode(joiner, 512) # BYIN hybrid control that RL combines a controlled, safe SUMO lane change
+        # if ENV_CONFIG['test_baseline']:
+        #     traci.vehicle.setLaneChangeMode(joiner, 512) # BYIN hybrid control that RL combines a controlled, safe SUMO lane change
+        if ENV_CONFIG['test_safety_shield']:
+            traci.vehicle.setLaneChangeMode(joiner, 0)
+            lane_change_active_dur = 4
+            safe_merge = self.safe_to_merge()
 
-        if action == ENV_CONFIG['change_lane_action']:   # action = 0
+        if action == ENV_CONFIG['change_lane_action'] and safe_merge == True:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
             # pos = traci.vehicle.getLanePosition(joiner)
             # lane = traci.vehicle.getLaneID(joiner)
@@ -374,7 +465,6 @@ class PlatoonEnv(gym.Env):
             traci.vehicle.slowDown(joiner, min(self.mixed_lane_speed, max(0, traci.vehicle.getSpeed(joiner) + a/2)), 0.5)
             self.jerk = (a - self.pre_act)/0.5
             self.pre_act = a
-
 
             # BYIN: track vh for speed analysis
             if not self.tracked:
@@ -407,7 +497,7 @@ class PlatoonEnv(gym.Env):
 
         reward = self._get_reward()
         
-        self.episode_reward += reward
+        self.event_reward += reward
 
         if not self.terminated:
             observation = self._get_obs()
@@ -416,7 +506,8 @@ class PlatoonEnv(gym.Env):
             
         info = self._get_info()
 
-        return observation, reward, self.terminated, False, info
+        self.truncated = self.episode_steps >= self.max_episode_steps
+        return observation, reward, self.terminated, self.truncated, info
     
     def select_joiner(self):
 
@@ -438,14 +529,13 @@ class PlatoonEnv(gym.Env):
             # select platoon
             available_platoons = []
             joiner_x, joiner_y = traci.vehicle.getPosition(joiner)
-
             for leader in self.platoons:
                 fronter = self.platoons[leader]["members"][-1]
                 fronter_x, fronter_y = traci.vehicle.getPosition(fronter)
 
-                if fronter_x <= joiner_x + ENV_CONFIG['upper_bound']  and fronter_x >= joiner_x + ENV_CONFIG['lower_bound']:
+                if fronter_x <= joiner_x + ENV_CONFIG['upper_bound'] and fronter_x >= joiner_x + ENV_CONFIG['lower_bound']:
                     available_platoons.append(leader)
-            
+
             if available_platoons:
                 leader = random.choice(available_platoons)
                 fronter = self.platoons[leader]["members"][-1]
@@ -645,20 +735,19 @@ class PlatoonEnv(gym.Env):
         self.communicate()
         traci.simulationStep()
 
-        ##BYIN: track ego speed
-        if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed']:
-            file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
-            veh_ids = set(traci.vehicle.getIDList())
-            #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
-            if self.tracked and self.track_egoID in veh_ids:
-                self.count += 1
-                ego_speed = traci.vehicle.getSpeed(self.track_egoID)
-                # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
-                if self.count < 1000000:
-                    with open(file_name, "a") as f:
-                        # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
-                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(
-                            self.pre_act) + '\n')
+        # #BYIN: track ego speed
+        # if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed']:
+        #     file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
+        #     veh_ids = set(traci.vehicle.getIDList())
+        #     #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
+        #     if self.tracked and self.track_egoID in veh_ids:
+        #         self.count += 1
+        #         ego_speed = traci.vehicle.getSpeed(self.track_egoID)
+        #         # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
+        #         if self.count < 1000000:
+        #             with open(file_name, "a") as f:
+        #                 # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
+        #                 f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + '\n')
 
         joiner, leader, fronter = self.join_info.values()
         self.configure_new_vehicles()
@@ -723,6 +812,7 @@ class PlatoonEnv(gym.Env):
                 platoon_members = self.platoons[veh]["members"]
                 if len(platoon_members) >= 2:
                     new_leader = platoon_members[1]
+
                     self.platoons[new_leader] = {"members": [], "state": 1, "ini_size":2}
                     self.platoons[new_leader]["members"]= platoon_members[1:]
                     if self.gui:
@@ -732,17 +822,17 @@ class PlatoonEnv(gym.Env):
                     self.plexe.set_active_controller(new_leader, ACC)
 
                     for v in self.topology:
-                        if self.topology[v]["leader"] == veh: 
+                        if self.topology[v]["leader"] == veh:
                             self.topology[v]["leader"] = new_leader
 
                     for v in self.topology:
-                        if self.topology[v]["front"] == veh: 
+                        if self.topology[v]["front"] == veh:
                             self.topology[v]["front"] = new_leader
 
                     if self.join_info["leader"] == veh:
-                        self.join_info["leader"] = new_leader   
+                        self.join_info["leader"] = new_leader
                         if self.join_info["fronter"] == veh:
-                            self.join_info["fronter"] = new_leader  
+                            self.join_info["fronter"] = new_leader
 
                 else:
                     for v in list(self.topology.keys()):
@@ -788,7 +878,76 @@ class PlatoonEnv(gym.Env):
             return ENV_CONFIG['max_caption_range']
         else:
             return abs(veh1_pos - veh2_pos)
-                
-                
 
 
+
+    def generate_flow_file(self):
+
+        if self.total_steps < 300000:
+            weights = [0.7, 0.2, 0.1, 0.0]
+        elif self.total_steps < 600000:
+            weights = [0.5, 0.3, 0.15, 0.05]
+        elif self.total_steps < 800000:
+            weights = [0.35, 0.3, 0.2, 0.15]
+        else:
+            weights = [0.25, 0.25, 0.25, 0.25]
+
+        self.flow_0 = random.choices(self.flow_values, weights)[0]
+        self.flow_1 = random.choices(self.flow_values, weights)[0]
+
+        # self.density_factor = np.clip((self.flow_0 + self.flow_1)/2000,
+        #                               0.5,
+        #                               2.0)
+
+        output_path = 'config/flows_episode.add.xml'
+
+        xml = f"""
+    <additional>
+
+        <flow id="lane0"
+              begin="0"
+              end="1000000"
+              departPos="base"
+              departSpeed="max"
+              departLane="0"
+              vehsPerHour="{self.flow_0}"
+              type="vmix"
+              route="m" />
+
+        <flow id="lane1"
+              begin="0"
+              end="1000000"
+              departPos="base"
+              departSpeed="max"
+              departLane="1"
+              vehsPerHour="{self.flow_1}"
+              type="cav2"
+              route="m" />
+
+    </additional>
+    """
+
+        with open(output_path, "w") as f:
+            f.write(xml)
+
+    def safe_to_merge (self):
+        observation = self._get_obs()
+
+        joiner_speed = observation[0]
+        platoon_fronter_speed = observation[3]
+        platoon_follower_speed = observation[4]
+        d_platoon_fronter_joiner = observation[11]
+        d_joiner_platoon_follower =  observation[12]
+
+        veh_length = 4
+
+        rear_gap  = d_joiner_platoon_follower - veh_length
+        front_gap = d_platoon_fronter_joiner - veh_length
+        rear_ttc = max(rear_gap,0) / (platoon_follower_speed - joiner_speed)
+        front_ttc = max(front_gap,0) / (joiner_speed - platoon_fronter_speed)
+
+        if rear_gap <=0 or (0 < rear_ttc < 2.0) or front_gap <= 0 or (0 < front_ttc < 2.0):
+            print("safe merge is false!")
+            return False
+
+        return True

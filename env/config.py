@@ -29,8 +29,8 @@ TRAIN_CONFIG = {
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
     'train': False,
-    'test': True,
-    'test_baseline': False,
+    'test': False, # if only run test.py, run_experiment should be false.
+    'test_safety_shield': True,
     'run_experiment': True,
     'save_dist_speed': False,
 
@@ -91,6 +91,7 @@ ENV_CONFIG = {
     'long_dist_pen': 0.5,
     'short_dist_pen': 2,
 
+    'flow_values' : [500, 1000, 1500, 2000]
 }
 
 ACC_MAP = {
