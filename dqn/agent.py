@@ -34,7 +34,7 @@ class Agent(metaclass=ABCMeta):
         self.log_frequency = log_frequency
         self.load = load
         self.info_loss = 0
-        self.e = None # This is epsilon
+        # self.e = None # This is epsilon
 
         self.memory = []
         self.actor = None
@@ -241,7 +241,7 @@ class Agent(metaclass=ABCMeta):
             self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.event_count))
             self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.event_count))
             self.summary_writer.add_scalar('Loss', len_mean, global_step=(self.event_count))
-            self.summary_writer.add_scalar('Epsilon', self.e, global_step=(self.event_count))
+            # self.summary_writer.add_scalar('Epsilon', self.e, global_step=(self.event_count))
             self.summary_writer.add_scalar('Events', self.event_count, global_step=(self.event_count))
 
 
