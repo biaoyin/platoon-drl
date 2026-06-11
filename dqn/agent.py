@@ -157,7 +157,7 @@ class Agent(metaclass=ABCMeta):
 
             self.resume_step = params_dict['step']
             self.step = self.resume_step
-            self.episode_count = params_dict['episode_count']
+            self.event_count = params_dict['event_count']
 
     def load_model_test(self):
         """
@@ -200,7 +200,7 @@ class Agent(metaclass=ABCMeta):
                 'actor': {k: v.detach().cpu().numpy() for k, v in self.actor.state_dict().items()},
                 'critic': {k: v.detach().cpu().numpy() for k, v in self.critic.state_dict().items()},
                 'step': self.step,
-                'episode_count': self.episode_count,
+                'event_count': self.event_count,
                 'rew_mean': self.info_mean('r'),
                 'len_mean': self.info_mean('l'),
                 'suc_mean': self.info_mean('s'),
