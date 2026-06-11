@@ -44,7 +44,7 @@ class Agent(metaclass=ABCMeta):
 
         self.step = 0  # training step
         self.resume_step = 0  # training step from loaded model
-        self.episode_count = 0
+        self.event_count = 0
         self.ep_info_buffer = deque([], maxlen=100)
 
         path = algo + '_actorlr' + str(actor_lr) + '_criticlr' + str(critic_lr)
@@ -79,7 +79,7 @@ class Agent(metaclass=ABCMeta):
 
     def store_transition_test(self, obs, action, reward, done, info):
         if done:
-            self.episode_count += 1
+            self.event_count += 1
             self.ep_info_buffer.append(
                 {'st': info['steps'], 'r': info['reward'], 's': info['successes'], 'c': info['collisions'],
                  'f': info["failures"], 'l': 0.0})
@@ -231,16 +231,17 @@ class Agent(metaclass=ABCMeta):
             print('Avg Ep Failure: ', fail_mean)
             print('Avg Ep Collision: ', col_mean)
             print('Loss', len_mean)
-            print('Episodes: ', self.episode_count)
+            print('Events: ', self.event_count)
             print('---', str(timedelta(seconds=round((time.time() - self.start_time), 0))), '---')
 
-            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Loss', len_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Episodes', self.episode_count, global_step=(self.episode_count))
+            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Loss', len_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Epsilon', self.e, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Events', self.event_count, global_step=(self.event_count))
 
 
     def log_test(self):
@@ -256,15 +257,15 @@ class Agent(metaclass=ABCMeta):
             print('Avg Ep Success: ', suc_mean)
             print('Avg Ep Failure: ', fail_mean)
             print('Avg Ep Collision: ', col_mean)
-            print('Episodes: ', self.episode_count)
+            print('Events: ', self.event_count)
             print('---', str(timedelta(seconds=round((time.time() - self.start_time), 0))), '---')
 
-            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.episode_count))
-            self.summary_writer.add_scalar('Episodes', self.episode_count, global_step=(self.episode_count))
+            self.summary_writer.add_scalar('AvgSteps', step_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgRew', rew_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgSuc', suc_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgFail', fail_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('AvgCol', col_mean, global_step=(self.event_count))
+            self.summary_writer.add_scalar('Events', self.event_count, global_step=(self.event_count))
 
     def info_mean(self, i):
         """
