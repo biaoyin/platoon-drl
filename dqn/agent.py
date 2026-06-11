@@ -34,6 +34,7 @@ class Agent(metaclass=ABCMeta):
         self.log_frequency = log_frequency
         self.load = load
         self.info_loss = 0
+        self.e = None # This is epsilon
 
         self.memory = []
         self.actor = None
@@ -71,7 +72,7 @@ class Agent(metaclass=ABCMeta):
     def store_transition(self, obs, action, log_prob, value, reward, done, info, train=False):
         self.memory.append((obs, action, log_prob.item(), value.item(), reward, done))
         if train and done:
-            self.episode_count += 1
+            self.event_count += 1
             self.ep_info_buffer.append(
                 {'st': info['steps'], 'r': info['reward'], 's': info['successes'], 'c': info['collisions'],
                  'f': info["failures"], 'l': self.info_loss})
