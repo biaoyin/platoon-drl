@@ -35,10 +35,11 @@ TRAIN_CONFIG = {
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': False,
+    'train': True,
     'test': False, # if only run test.py, run_experiment should be false.
-    'test_safety_shield': True,
-    'run_experiment': True,
+    'train_safety_shield':True,
+    'test_safety_shield': False,
+    'run_experiment': False,
     'save_dist_speed': False,
 
     # Actions executed for speed adjustement
