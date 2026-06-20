@@ -6,13 +6,13 @@ TRAIN_CONFIG = {
     'gpu': '0',                                 # GPU # 0 is gpu, 1 is cpu
     'n_env': 1,                                 # Multi-processing environments
     'actor_lr': 1e-04, #3e-04,                         #  actor network learning rate
-    'critic_lr': 3e-04, #1e-3                        # critic network learning rate
-    'gamma': 0.9,                               # Discount factor
-    'bs' : 128,    #                             # batch size
+    'critic_lr': 1e-03, #1e-3                        # critic network learning rate
+    'gamma': 0.9,                                # Discount factor
+    'bs' : 256,    #                             # batch size
     'clip_eps' : 0.1,  # 0.2
     'gae_lambda' : 0.95,
     'epochs' : 5,  # 10
-    'entropy_coef': 0.02, #0.01,
+    'entropy_coef': 0.01, #0.01,
     'save_freq': 1000,                           # Save frequency 1000: straining steps
     'log_freq': 100,                            # Log frequency 5000: straining steps
     'save_dir': './save/' + CONFIG + "/",       # Save directory
@@ -28,11 +28,12 @@ TRAIN_CONFIG = {
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': True,
-    'test': False, # if only run test.py, run_experiment should be false.
+    'train': False,
+    'test': True, # if only run test.py, run_experiment should be false.
+    'train_safety_shield': False,
     'test_safety_shield': False,
-    'run_experiment': False,
-    'save_dist_speed': False,
+    'run_experiment': True,
+    'save_dist_speed': True,
 
     # Actions executed for speed adjustement
     'action_for_speed': True,
@@ -56,6 +57,7 @@ ENV_CONFIG = {
     'delay_penalty' : -1,
     'comfort_penalty' : -1,
     'failure_penalty' : -50,
+    'risky_penalty' : -100,
 
     #lanes
     "mixed_lane": 0,
