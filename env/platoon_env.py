@@ -271,7 +271,10 @@ class PlatoonEnv(gym.Env):
                     print("distance too long")
                     print(d)
                     reward -= ENV_CONFIG['long_dist_pen'] * (d - ENV_CONFIG['max_dist'])
-
+                # BYIN: add TTC designed in reward function
+                if not self.safe_merge:
+                    reward += ENV_CONFIG['risky_penalty']
+                    print("Successful_join but TTC<2s, which is too short")
             # FAILED JOIN
             elif joiner in self.left_vehicles or fronter in self.left_vehicles or \
                 traci.vehicle.getLaneIndex(joiner) == self.platoon_lane and (not traci.vehicle.getLeader(joiner) or \
@@ -296,6 +299,8 @@ class PlatoonEnv(gym.Env):
                 if abs(self.jerk ) > 4:
                     reward += ENV_CONFIG['comfort_penalty'] * abs(self.jerk)
                     print("VEHICLE JERK")
+                if not self.safe_keeplane:
+                    reward += ENV_CONFIG['risky_penalty'] * 0.5
         return reward
 
 
@@ -427,6 +432,10 @@ class PlatoonEnv(gym.Env):
 
         if ENV_CONFIG['train']:
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
+        if ENV_CONFIG['train_safety_shield']:
+            self.safe_merge = self.safe_to_merge()
+            self.safe_keeplane = self.safe_to_keeplane()
+
         if ENV_CONFIG['test']:
             traci.vehicle.setLaneChangeMode(joiner, 0) # BYIN totally disable SUMO control
         # if ENV_CONFIG['test_baseline']:
@@ -434,9 +443,9 @@ class PlatoonEnv(gym.Env):
         if ENV_CONFIG['test_safety_shield']:
             traci.vehicle.setLaneChangeMode(joiner, 0)
             lane_change_active_dur = 4
-            safe_merge = self.safe_to_merge()
+            safe_merge_controller = self.safe_to_merge()
 
-        if action == ENV_CONFIG['change_lane_action'] and safe_merge == True:   # action = 0
+        if action == ENV_CONFIG['change_lane_action'] and safe_merge_controller == True:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
             # pos = traci.vehicle.getLanePosition(joiner)
             # lane = traci.vehicle.getLaneID(joiner)
@@ -935,8 +944,8 @@ class PlatoonEnv(gym.Env):
         observation = self._get_obs()
 
         joiner_speed = observation[0]
-        platoon_fronter_speed = observation[3]
-        platoon_follower_speed = observation[4]
+        platoon_fronter_speed = observation[5]
+        platoon_follower_speed = observation[6]
         d_platoon_fronter_joiner = observation[11]
         d_joiner_platoon_follower =  observation[12]
 
@@ -949,6 +958,26 @@ class PlatoonEnv(gym.Env):
 
         if rear_gap <=0 or (0 < rear_ttc < 2.0) or front_gap <= 0 or (0 < front_ttc < 2.0):
             print("safe merge is false!")
+            return False
+
+        return True
+
+    def safe_to_keeplane (self):
+        observation = self._get_obs()
+        veh_length = 4
+        joiner_speed = observation[0]
+        fronter_speed = observation[1]
+        follower_speed = observation[2]
+        d_fronter_joiner = observation[7]
+        d_joiner_follower =  observation[8]
+
+        rear_gap  = d_joiner_follower - veh_length
+        front_gap = d_fronter_joiner - veh_length
+        rear_ttc = max(rear_gap,0) / (follower_speed - joiner_speed)
+        front_ttc = max(front_gap,0) / (joiner_speed - fronter_speed)
+
+        if rear_gap <=0 or (0 < rear_ttc < 1.0) or front_gap <= 0 or (0 < front_ttc < 1.0):
+            print("safe keeplane is false!")
             return False
 
         return True
