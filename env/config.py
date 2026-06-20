@@ -64,6 +64,7 @@ ENV_CONFIG = {
     'delay_penalty' : -1,
     'comfort_penalty' : -1,
     'failure_penalty' : -50,
+    'risky_penalty' : -100,
 
     #lanes
     "mixed_lane": 0,
