@@ -423,7 +423,9 @@ class PlatoonEnv(gym.Env):
 
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
-        safe_merge = True
+        safe_merge_controller = True
+        self.safe_merge =True
+        self.safe_keeplane =True
 
         joiner, leader, fronter = self.join_info.values()
 
