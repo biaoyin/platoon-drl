@@ -1,3 +1,5 @@
+import os
+
 import gymnasium as gym
 from gymnasium import spaces
 import traci
@@ -8,7 +10,7 @@ import math
 
 
 from .config import ENV_CONFIG, ACC_MAP, TRAIN_CONFIG
-from collections import deque 
+from collections import defaultdict
 import time
 import sys
 from pathlib import Path
@@ -737,18 +739,28 @@ class PlatoonEnv(gym.Env):
         traci.simulationStep()
 
         # #BYIN: track ego speed
-        # if (ENV_CONFIG['test'] or ENV_CONFIG['test_baseline']) and ENV_CONFIG['save_dist_speed']:
-        #     file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
-        #     veh_ids = set(traci.vehicle.getIDList())
-        #     #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
-        #     if self.tracked and self.track_egoID in veh_ids:
-        #         self.count += 1
-        #         ego_speed = traci.vehicle.getSpeed(self.track_egoID)
-        #         # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
-        #         if self.count < 1000000:
-        #             with open(file_name, "a") as f:
-        #                 # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
-        #                 f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + '\n')
+        if (ENV_CONFIG['test'] or ENV_CONFIG['test_safety_shield']) and ENV_CONFIG['save_dist_speed']:
+            file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
+
+            if not os.path.exists(file_name):
+                with open(file_name, "w", newline="") as f:
+                    f.write("ego_id"+ ';' +"speed"+ ';' +"lane_change"+ ';' + "action"+ ';' +"ave_speed_com_zone_mixedlane"+ ';' +"ave_speed_com_zone_platoonlane" + '\n')
+
+            veh_ids = set(traci.vehicle.getIDList())
+            #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
+            if self.tracked and self.track_egoID in veh_ids:
+                self.count += 1
+                ego_speed = round(traci.vehicle.getSpeed(self.track_egoID),3)
+                # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
+                avg_speed_dict = self.get_lane_avg_speed_in_comm_zone()
+                if self.count < 1000:
+                    with open(file_name, "a") as f:
+                        # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
+                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + ';' + str(avg_speed_dict["0"]) + ';' + str(avg_speed_dict["1"]) + '\n')
+
+
+
+
 
         joiner, leader, fronter = self.join_info.values()
         self.configure_new_vehicles()
@@ -952,3 +964,47 @@ class PlatoonEnv(gym.Env):
             return False
 
         return True
+
+    def get_lane_avg_speed_in_comm_zone(self, comm_range=200.0):
+
+        ego_x, ego_y = traci.vehicle.getPosition(self.track_egoID)
+
+        lane_speeds = defaultdict(list)
+
+        # speed limits per lane (cached from SUMO)
+        lane_speed_limit = {
+            '0': 100/3.6,
+            '1': 120/3.6
+        }
+
+        for veh_id in traci.vehicle.getIDList():
+
+            if veh_id == self.track_egoID:
+                continue
+
+            x, y = traci.vehicle.getPosition(veh_id)
+
+            dx = x - ego_x
+            dy = y - ego_y
+            dist = (dx ** 2 + dy ** 2) ** 0.5
+
+            if dist <= comm_range:
+                lane_id = traci.vehicle.getLaneID(veh_id)
+                lane_idx = lane_id.split('_')[-1]  # '0' or '1'
+
+                speed = traci.vehicle.getSpeed(veh_id)
+                lane_speeds[lane_idx].append(speed)
+
+        lane_avg_speed = {}
+
+        for lane_idx in ['0', '1']:
+
+            if len(lane_speeds[lane_idx]) > 0:
+                avg_speed = sum(lane_speeds[lane_idx]) / len(lane_speeds[lane_idx])
+            else:
+                # ✅ no vehicles → assume free flow
+                avg_speed = lane_speed_limit[lane_idx]
+
+            lane_avg_speed[lane_idx] = round(avg_speed, 3)
+
+        return lane_avg_speed
