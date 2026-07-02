@@ -750,26 +750,24 @@ class PlatoonEnv(gym.Env):
         traci.simulationStep()
 
         # #BYIN: track ego speed
-        if (ENV_CONFIG['test'] or ENV_CONFIG['test_safety_shield']) and ENV_CONFIG['save_dist_speed']:
-            file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
-
-            if not os.path.exists(file_name):
-                with open(file_name, "w", newline="") as f:
-                    f.write("ego_id"+ ';' +"speed"+ ';' +"lane_change"+ ';' + "action"+ ';' +"ave_speed_com_zone_mixedlane"+ ';' +"ave_speed_com_zone_platoonlane" + '\n')
-
-            veh_ids = set(traci.vehicle.getIDList())
-            #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
-            if self.tracked and self.track_egoID in veh_ids:
-                self.count += 1
-                ego_speed = round(traci.vehicle.getSpeed(self.track_egoID),3)
-                # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
-                avg_speed_dict = self.get_lane_avg_speed_in_comm_zone()
-                if self.count < 1000:
-                    with open(file_name, "a") as f:
-                        # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
-                        f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + ';' + str(avg_speed_dict["0"]) + ';' + str(avg_speed_dict["1"]) + '\n')
-
-
+        # if (ENV_CONFIG['test'] or ENV_CONFIG['test_safety_shield']) and ENV_CONFIG['save_dist_speed']:
+        #     file_name = TRAIN_CONFIG['algo'] + '_speed.txt'
+        #
+        #     if not os.path.exists(file_name):
+        #         with open(file_name, "w", newline="") as f:
+        #             f.write("count" + ";" + "ego_id"+ ';' +"speed"+ ';' +"lane_change"+ ';' + "action"+ ';' +"ave_speed_com_zone_mixedlane"+ ';' +"ave_speed_com_zone_platoonlane" + '\n')
+        #
+        #     veh_ids = set(traci.vehicle.getIDList())
+        #     #if self.tracked and {self.track_egoID, self.track_fronterID}.issubset(veh_ids):
+        #     if self.tracked and self.track_egoID in veh_ids:
+        #         self.count += 1
+        #         ego_speed = round(traci.vehicle.getSpeed(self.track_egoID),3)
+        #         # fronter_speed = traci.vehicle.getSpeed(self.track_fronterID)
+        #         avg_speed_dict = self.get_lane_avg_speed_in_comm_zone()
+        #         if self.count < 2000:
+        #             with open(file_name, "a") as f:
+        #                 # f.write(str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';'+ str(self.track_fronterID) + ';' + str(fronter_speed) + '\n')
+        #                 f.write(str(self.count) + ';' + str(self.track_egoID) + ';' + str(ego_speed) + ';' + str(self.lane_change) + ';' + str(self.pre_act) + ';' + str(avg_speed_dict["0"]) + ';' + str(avg_speed_dict["1"]) + '\n')
 
 
 
