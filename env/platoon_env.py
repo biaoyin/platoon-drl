@@ -430,6 +430,8 @@ class PlatoonEnv(gym.Env):
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
         safe_merge_controller = True
+        safe_keeplane_controller = True
+
         self.safe_merge = True
         self.safe_keeplane = True
 
@@ -451,6 +453,7 @@ class PlatoonEnv(gym.Env):
             traci.vehicle.setLaneChangeMode(joiner, 0)
             lane_change_active_dur = 4
             safe_merge_controller = self.safe_to_merge()
+            safe_keeplane_controller = self.safe_to_keeplane()
 
         if action == ENV_CONFIG['change_lane_action'] and safe_merge_controller == True:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
@@ -476,7 +479,7 @@ class PlatoonEnv(gym.Env):
             # BYIN: attention: this should be added after simulationStep where the maneuver of lane change occurs
             # if joiner not in self.platoons[leader]["members"]:
             #     self.platoons[leader]["members"].append(joiner)
-        if ENV_CONFIG['action_for_speed'] and action != ENV_CONFIG['change_lane_action']:  # BYIN: new added for other actions; DO NOT set Plexe controller
+        if ENV_CONFIG['action_for_speed'] and action != ENV_CONFIG['change_lane_action'] and safe_keeplane_controller:  # BYIN: new added for other actions; DO NOT set Plexe controller
             traci.vehicle.setSpeedMode(joiner, 31) # BYIN: Mostly manual (no safety), when 0 --> Fully manual, everything disabled.
             a = ACC_MAP[action]
             traci.vehicle.slowDown(joiner, min(self.mixed_lane_speed, max(0, traci.vehicle.getSpeed(joiner) + a/2)), 0.5)
@@ -951,17 +954,31 @@ class PlatoonEnv(gym.Env):
         observation = self._get_obs()
 
         joiner_speed = observation[0]
-        platoon_fronter_speed = observation[5] # revise from 3
+        veh_length = 4
+
+        platoon_fronter_speed = observation[5]  # revise from 3
         platoon_follower_speed = observation[6]
         d_platoon_fronter_joiner = observation[11]
-        d_joiner_platoon_follower =  observation[12]
-
-        veh_length = 4
+        d_joiner_platoon_follower = observation[12]
 
         rear_gap  = d_joiner_platoon_follower - veh_length
         front_gap = d_platoon_fronter_joiner - veh_length
         rear_ttc = max(rear_gap,0) / (platoon_follower_speed - joiner_speed)
         front_ttc = max(front_gap,0) / (joiner_speed - platoon_fronter_speed)
+###############
+        # plane_fronter_speed = observation[3]  # revise from 3
+        # plane_follower_speed = observation[4]
+        # d_plane_fronter_joiner = observation[9]
+        # d_joiner_plane_follower = observation[10]
+        # rear_gap1  = d_joiner_plane_follower - veh_length
+        # front_gap1 = d_plane_fronter_joiner - veh_length
+        # rear_ttc1 = max(rear_gap1,0) / (plane_follower_speed - joiner_speed)
+        # front_ttc1 = max(front_gap1,0) / (joiner_speed - plane_fronter_speed)
+
+        # rear_gap = min(rear_gap0, rear_gap1)
+        # front_gap = min(front_gap0, front_gap1)
+        # rear_ttc = min(rear_ttc0, rear_ttc1)
+        # front_ttc = min(front_ttc0, front_ttc1)
 
         if rear_gap <=0 or (0 < rear_ttc < 2.0) or front_gap <= 0 or (0 < front_ttc < 2.0) :
             print("safe merge is false!")
