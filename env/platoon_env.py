@@ -424,6 +424,7 @@ class PlatoonEnv(gym.Env):
         sim_steps_per_decision = 5 # 0.5 s
         lane_change_active_dur = 2 # seconds
         safe_merge_controller = True
+        safe_keeplane_controller = True
         self.safe_merge =True
         self.safe_keeplane =True
 
@@ -446,6 +447,7 @@ class PlatoonEnv(gym.Env):
             traci.vehicle.setLaneChangeMode(joiner, 0)
             lane_change_active_dur = 4
             safe_merge_controller = self.safe_to_merge()
+            safe_keeplane_controller= self.safe_to_keeplane()
 
         if action == ENV_CONFIG['change_lane_action'] and safe_merge_controller == True:   # action = 0
             traci.vehicle.setVehicleClass(joiner, 'hov')
@@ -471,7 +473,7 @@ class PlatoonEnv(gym.Env):
             # BYIN: attention: this should be added after simulationStep where the maneuver of lane change occurs
             # if joiner not in self.platoons[leader]["members"]:
             #     self.platoons[leader]["members"].append(joiner)
-        if ENV_CONFIG['action_for_speed'] and action != ENV_CONFIG['change_lane_action']:  # BYIN: new added for other actions; DO NOT set Plexe controller
+        if ENV_CONFIG['action_for_speed'] and action != ENV_CONFIG['change_lane_action'] and safe_keeplane_controller:  # BYIN: new added for other actions; DO NOT set Plexe controller
             traci.vehicle.setSpeedMode(joiner, 31) # BYIN: Mostly manual (no safety), when 0 --> Fully manual, everything disabled.
             a = ACC_MAP[action]
             traci.vehicle.slowDown(joiner, min(self.mixed_lane_speed, max(0, traci.vehicle.getSpeed(joiner) + a/2)), 0.5)
