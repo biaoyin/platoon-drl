@@ -14,9 +14,9 @@ from env.config import TRAIN_CONFIG
 
 algo = TRAIN_CONFIG['algo'] + '_lr0.0002'
 flow_m_values = [500, 1000, 1500, 2000]
-flow_pm_values = [500, 1000, 1500, 2000]
+# flow_pm_values = [500, 1000, 1500, 2000]
 # flow_m_values = [2000]
-# flow_pm_values = [2000]
+flow_pm_values = [2000]
 # invalid_paris = {
 #     (500, 1000),
 #     (500, 1500),

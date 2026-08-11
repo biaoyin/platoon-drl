@@ -27,7 +27,7 @@ TRAIN_CONFIG = {
     'max_episode_steps': 1000,                  # Time limit episode (decision) steps 1000 (0.1s/step)
     'max_total_steps': 1000000,                  # Max total training (decision) steps e.g.,1000000 if > 0, else (if =0) inf training
     'max_total_events_test': 10000,           # Max total testing events, default 10000
-    'algo': 'DoubleDQNAgent'                    # DQNAgent
+    'algo': 'DQNAgent'                    # DQNAgent
                                                 # DoubleDQNAgent
                                                 # DuelingDoubleDQNAgent
                                                 # PerDuelingDoubleDQNAgent
@@ -35,11 +35,11 @@ TRAIN_CONFIG = {
 
 ENV_CONFIG = {
     # choice one of them regarding lane change with a safe mechanism (test_baseline) or not (train, test)
-    'train': True,
-    'test': False, # if only run test.py, run_experiment should be false.
-    'train_safety_shield':True,
-    'test_safety_shield': False,
-    'run_experiment': False,
+    'train': False,
+    'test': True, # if only run test.py, run_experiment should be false.
+    'train_safety_shield':False,
+    'test_safety_shield': True,
+    'run_experiment': True,
     'save_dist_speed': False,
 
     # Actions executed for speed adjustement
